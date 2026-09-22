@@ -137,3 +137,91 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (max-width: 1100px) {
   .app-shell { height: auto; min-height: 100vh; overflow: visible; }.app-header { flex-wrap: wrap; padding: 9px 14px; }.brand { min-width: auto; }.main-nav { order: 3; width: 100%; justify-content: center; }.workspace { height: auto; min-height: 0; grid-template-columns: 1fr; }.form-panel, .dashboard-panel { min-height: 700px; }.form-scroll { max-height: 680px; }.dashboard-scroll { max-height: 850px; }.footer-summary { grid-template-columns: repeat(3, 1fr) 1.4fr; }.primary-button { grid-column: auto; }
 }
+
+/* Comfortable reading at 100% browser zoom on a 125%-scaled desktop. */
+.brand p, .panel-intro p, .dashboard-intro p { font-size: 14px; }
+.main-nav button, .tool-button, .filter-button, .tab-row button,
+.text-button, .student-link { font-size: 14px; }
+.backup-status, .filter-top, .section-heading > span,
+.section-hint, .form-error, .storage-alert, .toast { font-size: 13px; }
+.tool-button, .icon-button { min-height: 40px; }
+.icon-button { width: 40px; }
+.field-block > label, .section-heading h3 small, .score-number,
+.choice-box h4, .type-choice strong { font-size: 14px; }
+.field-block > input, .field-block > textarea { height: 40px; font-size: 15px; }
+.field-block > textarea { min-height: 72px; }
+.segmented { min-height: 40px; }
+.segmented button { font-size: 14px; padding: 8px 5px; }
+.section-heading h3, .analysis-head h3, .recent-head h3 { font-size: 17px; }
+.score-row { grid-template-columns: 20px minmax(0, 1fr) 140px; min-height: 35px; gap: 6px; }
+.score-row label, .check-row { font-size: 14px; }
+.score-choices button { width: 44px; height: 30px; font-size: 14px; }
+.choice-box { padding: 12px 14px; }
+.check-list { gap: 8px; }
+.check-row { min-height: 25px; white-space: normal; }
+.check-row input, .type-choice input { width: 18px; height: 18px; }
+.check-row input:checked::after, .type-choice input:checked::after {
+  width: 10px; height: 6px; transform: translate(2px, 2px) rotate(-45deg);
+}
+.type-choice { padding: 11px; }
+.type-choice small, .disabled-field, .summary-box span,
+.summary-box strong small { font-size: 13px; }
+.disabled-field { min-height: 40px; }
+.form-error { padding: 9px 11px; }
+.summary-box { padding: 8px 11px; }
+.summary-box strong { font-size: 19px; }
+.summary-box.violet strong { font-size: 14px; }
+.primary-button { font-size: 16px; }
+.filter-select { font-size: 13px; }
+.filter-select select, .filter-select input { height: 38px; font-size: 14px; }
+.kpi-card { min-height: 144px; }
+.kpi-label { font-size: 14px; white-space: normal; line-height: 1.25; }
+.kpi-card strong { font-size: 23px; }
+.kpi-card small { font-size: 12px; white-space: normal; line-height: 1.25; }
+.analysis-head p, .recent-head p, .language-key { font-size: 13px; }
+.chart-card { height: 210px; }
+.chart-title { font-size: 14px; min-height: 36px; }
+.bar-column, .bar-column strong { font-size: 13px; }
+.bar-column > span, .chart-note { font-size: 12px; }
+.bar-column > span { bottom: -21px; }
+.chart-note { margin-top: 25px; }
+.detail-table th, .detail-table td, .reviews-table th,
+.reviews-table td { font-size: 13px; padding: 9px 11px; }
+.table-footnote, .card-head span, .card-head small,
+.pattern-record small, .empty-pattern { font-size: 12px; }
+.card-head h4, .pattern-record, .progress-row { font-size: 13px; }
+.progress-row { min-height: 30px; grid-template-columns: minmax(120px, 1.4fr) minmax(40px, 1fr) 30px; }
+.pattern-record { grid-template-columns: 145px minmax(0, 1fr) 16px; padding: 11px 2px; }
+.table-search input { font-size: 14px; width: 140px; }
+.reviews-table { min-width: 960px; }
+.issue-strip strong { font-size: 14px; }
+.issue-strip small, .issue-tags span { font-size: 12px; }
+.issue-strip small { white-space: normal; }
+
+@media (max-width: 1600px) {
+  .form-grid.score-work { grid-template-columns: 1fr; }
+  .check-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 14px; }
+  .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+  .comparison-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+  .kpi-card { padding: 13px; }
+  .bars { gap: 26px; }
+  .bar-column { width: 50px; }
+}
+
+@media (max-width: 650px) {
+  .app-header { gap: 10px; }
+  .brand { gap: 10px; }
+  .brand h1 { font-size: 19px; }
+  .header-tools { border-left: 0; padding-left: 0; flex-wrap: wrap; }
+  .main-nav { justify-content: flex-start; overflow-x: auto; }
+  .form-grid.two, .form-grid.three, .notes-date,
+  .filter-grid, .pattern-grid, .comparison-grid { grid-template-columns: 1fr !important; }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .check-list { grid-template-columns: 1fr; }
+  .footer-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .primary-button { grid-column: 1 / -1; }
+  .tab-row { overflow-x: auto; }
+  .recent-head, .dashboard-intro { align-items: flex-start; flex-wrap: wrap; }
+  .issue-strip { flex-wrap: wrap; }
+  .issue-tags { width: 100%; justify-content: flex-start; }
+}
