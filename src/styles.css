@@ -39,10 +39,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .field-block { min-width: 0; }
 .field-block > label { display: block; font-size: 11px; color: #1a2942; font-weight: 700; margin: 0 0 5px; }
 .required { color: #d44562; }
-.field-block > input, .field-block > textarea { display: block; width: 100%; border: 1px solid #cbd8e9; border-radius: 6px; color: #172743; background: #fff; height: 32px; padding: 6px 11px; outline: none; font-size: 12px; box-shadow: inset 0 1px 2px #1c42690b; }
+.field-block > input, .field-block > select, .field-block > textarea { display: block; width: 100%; border: 1px solid #cbd8e9; border-radius: 6px; color: #172743; background: #fff; height: 32px; padding: 6px 11px; outline: none; font-size: 12px; box-shadow: inset 0 1px 2px #1c42690b; }
 .field-block > textarea { height: 52px; resize: vertical; line-height: 1.4; }
 .field-block > input::placeholder, .field-block > textarea::placeholder { color: #8593a8; }
-.field-block > input:focus, .field-block > textarea:focus { border-color: #2c76dc; box-shadow: 0 0 0 3px #2674da17; }
+.field-block > input:focus, .field-block > select:focus, .field-block > textarea:focus { border-color: #2c76dc; box-shadow: 0 0 0 3px #2674da17; }
 .form-grid { display: grid; gap: 10px 14px; margin-top: 12px; }
 .form-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .form-grid.three { grid-template-columns: 1fr 1fr 1.3fr; }
@@ -148,7 +148,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .icon-button { width: 40px; }
 .field-block > label, .section-heading h3 small, .score-number,
 .choice-box h4, .type-choice strong { font-size: 14px; }
-.field-block > input, .field-block > textarea { height: 40px; font-size: 15px; }
+.field-block > input, .field-block > select, .field-block > textarea { height: 40px; font-size: 15px; }
 .field-block > textarea { min-height: 72px; }
 .segmented { min-height: 40px; }
 .segmented button { font-size: 14px; padding: 8px 5px; }

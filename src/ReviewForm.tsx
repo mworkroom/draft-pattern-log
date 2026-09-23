@@ -1,7 +1,7 @@
 import { useRef, type ReactNode } from 'react'
 import { CircleHelp, RotateCcw } from 'lucide-react'
 import {
-  AI_USAGE, ENGLISH_QUALITY, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS,
+  AI_USAGE, ENGLISH_QUALITY, FIELD_OPTIONS, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS,
   STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS, TIME_OPTIONS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS,
   structureTotal, type ReviewDraft, type ReviewRecordV1, type ReworkKey, type StructureKey, type TypeKey,
 } from './model'
@@ -13,7 +13,6 @@ interface Props {
   onCancelEdit: () => void
   editing: ReviewRecordV1 | null
   error: string
-  fieldSuggestions: string[]
 }
 
 function SectionHeading({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
@@ -28,8 +27,9 @@ function Segmented<T extends string>({ options, value, onChange, label }: {
   </div>
 }
 
-export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, editing, error, fieldSuggestions }: Props) {
+export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, editing, error }: Props) {
   const nameRef = useRef<HTMLInputElement>(null)
+  const hasLegacyField = draft.field !== '' && !FIELD_OPTIONS.some(option => option === draft.field)
   const update = <K extends keyof ReviewDraft>(key: K, value: ReviewDraft[K]) => onChange({ ...draft, [key]: value })
   const toggleRework = (key: ReworkKey) => update('rework', draft.rework.includes(key) ? draft.rework.filter(item => item !== key) : [...draft.rework, key])
   const toggleType = (key: TypeKey) => {
@@ -64,7 +64,11 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
       </div>
 
       <div className="form-grid two">
-        <div className="field-block"><label htmlFor="field">Field</label><input id="field" list="field-options" placeholder="e.g. Psychology" value={draft.field} onChange={event => update('field', event.target.value)} /><datalist id="field-options">{fieldSuggestions.map(value => <option key={value} value={value}/>)}</datalist></div>
+        <div className="field-block"><label htmlFor="field">Field</label><select id="field" value={draft.field} onChange={event => update('field', event.target.value)}>
+          <option value="">Select a field</option>
+          {hasLegacyField ? <option value={draft.field}>Existing: {draft.field}</option> : null}
+          {FIELD_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+        </select></div>
         <div className="field-block"><label>School Tier</label><Segmented options={TIERS} value={draft.schoolTier} label="School Tier" onChange={value => update('schoolTier', value)} /></div>
       </div>
 

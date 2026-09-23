@@ -8,6 +8,7 @@ for (const width of [1280, 2048]) {
     for (const selector of [
       '.field-block > label',
       '.field-block > input',
+      '.field-block > select',
       '.segmented button',
       '.score-row label',
       '.check-row',

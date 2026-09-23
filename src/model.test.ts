@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blankDraft, toRecord, validateDraft } from './model'
+import { blankDraft, FIELD_OPTIONS, recordToDraft, toRecord, validateDraft } from './model'
 import { EMPTY_FILTERS, filterReviews, medianTime, reworkMedian, scoreMedian } from './analytics'
 import { exportCsv, parseBackup } from './storage'
 
@@ -11,6 +11,13 @@ function completeDraft() {
 }
 
 describe('review entry', () => {
+  it('keeps the eight Field choices in one list, with separate problem fields', () => {
+    expect(FIELD_OPTIONS).toEqual([
+      'Business / Management', 'Education', '공대·이공계', 'Social Sciences',
+      'Sport', 'Development Studies', 'International Relations', 'Other',
+    ])
+  })
+
   it('starts with J’s chosen defaults but no structure scores', () => {
     const draft = blankDraft('2026-09-23')
     expect([draft.draftLanguage, draft.level, draft.schoolTier, draft.aiUsage, draft.timeSpent])
@@ -52,6 +59,13 @@ describe('analytics and backup', () => {
     const backup = { schemaVersion: 1, exportedAt: new Date().toISOString(), records: [good] }
     expect(parseBackup(backup).records).toHaveLength(1)
     expect(() => parseBackup({ ...backup, records: [good, { ...good, id: 'other', timeSpent: '61m' }] })).toThrow()
+  })
+
+  it('preserves a previously typed Field through backup and editing', () => {
+    const oldRecord = { ...create('Legacy', 'English', '60m', 1), field: 'Psychology' }
+    const backup = { schemaVersion: 1, exportedAt: new Date().toISOString(), records: [oldRecord] }
+    expect(parseBackup(backup).records[0].field).toBe('Psychology')
+    expect(recordToDraft(oldRecord).field).toBe('Psychology')
   })
 
   it('exports Korean text and embedded CSV punctuation safely', () => {

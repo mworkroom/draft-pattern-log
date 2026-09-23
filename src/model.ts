@@ -26,6 +26,19 @@ export const LEVELS = ["Master's", "Bachelor's", 'Other'] as const
 export const TIERS = ['Top', 'Mid', 'Other'] as const
 export const AI_USAGE = ['Yes', 'No', 'Unsure'] as const
 export const ENGLISH_QUALITY = ['Good', 'Average', 'Poor'] as const
+// Add or reorder Field dropdown choices here; existing free-text records remain readable.
+export const FIELD_OPTIONS = [
+  'Business',
+  'STEM',
+  'Sport',
+  'Development Studies',
+  'International Relations',
+  'Education',  
+  'Social Sciences',
+  'UCAS',
+  'Foundation',
+  'Other',
+] as const
 
 export type StructureKey = typeof STRUCTURE_KEYS[number]
 export type ReworkKey = typeof REWORK_KEYS[number]

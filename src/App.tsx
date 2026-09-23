@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ChartNoAxesCombined, ClipboardList, Download, FileJson, House, Save, ShieldCheck, Upload,
 } from 'lucide-react'
@@ -53,7 +53,6 @@ export default function App() {
   const backupVersionRef = useRef(0)
   recordsRef.current = records
   const editing = records.find(record => record.id === editingId) ?? null
-  const fieldSuggestions = useMemo(() => [...new Set(records.map(record => record.field.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [records])
   const needsBackup = records.length > 0 && (!backupAt || records.some(record => record.updatedAt > backupAt))
 
   useEffect(() => {
@@ -398,7 +397,7 @@ export default function App() {
     {storageError ? <div className="storage-alert" role="alert">{storageError}</div> : null}
     {notice ? <div className="toast" role="status"><Save size={15}/>{notice}</div> : null}
     <main className="workspace">
-      <ReviewForm draft={draft} onChange={value => { setDraft(value); if (formError) setFormError('') }} onSave={saveReview} onCancelEdit={() => { setEditingId(null); setDraft(blankDraft(draft.reviewDate)); setFormError('') }} editing={editing} error={formError} fieldSuggestions={fieldSuggestions} />
+      <ReviewForm draft={draft} onChange={value => { setDraft(value); if (formError) setFormError('') }} onSave={saveReview} onCancelEdit={() => { setEditingId(null); setDraft(blankDraft(draft.reviewDate)); setFormError('') }} editing={editing} error={formError} />
       <Dashboard records={records} onEdit={editReview} onDelete={deleteReview} />
     </main>
   </div>
