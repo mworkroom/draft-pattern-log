@@ -2,6 +2,7 @@ import { useRef, type ReactNode } from 'react'
 import { CircleHelp, RotateCcw } from 'lucide-react'
 import {
   AI_USAGE, ENGLISH_QUALITY, FIELD_OPTIONS, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS,
+  REVISION_HELP, REVISION_KEYS, REVISION_LABELS, REVISION_LEVELS,
   STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS, TIME_OPTIONS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS,
   structureTotal, type ReviewDraft, type ReviewRecordV1, type ReworkKey, type StructureKey, type TypeKey,
 } from './model'
@@ -104,6 +105,21 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
         <span><strong>{TYPE_LABELS[key]}</strong><small>{TYPE_HELP[key]}</small></span>
       </label>)}</div>
       {draft.problemTypes.includes('unclassified') ? <div className="field-block pattern-note"><label htmlFor="pattern-note">New Pattern Note <span className="required">*</span></label><input id="pattern-note" placeholder="기존 유형으로 설명되지 않는 패턴을 적어주세요" value={draft.unclassifiedNote} onChange={event => update('unclassifiedNote', event.target.value)} /></div> : null}
+
+      <div className="form-divider" />
+      <SectionHeading>Revision Focus</SectionHeading>
+      <p className="section-hint">각 영역을 실제로 얼마나 수정했는지 기록합니다.</p>
+      <div className="revision-table-wrap"><table className="revision-table">
+        <thead><tr><th scope="col">Area</th>{REVISION_LEVELS.map(level => <th scope="col" key={level}>{level[0].toUpperCase() + level.slice(1)}</th>)}</tr></thead>
+        <tbody>{REVISION_KEYS.map(key => <tr key={key}>
+          <th scope="row">{REVISION_LABELS[key]}</th>
+          {REVISION_LEVELS.map(level => <td key={level}>
+            <label title={REVISION_HELP[key][level]}>
+              <input type="radio" name={key} value={level} checked={draft[key] === level} aria-label={`${REVISION_LABELS[key]}: ${level}`} onChange={() => update(key, level)} />
+            </label>
+          </td>)}
+        </tr>)}</tbody>
+      </table></div>
 
       <div className="form-divider" />
       <div className="form-grid two">

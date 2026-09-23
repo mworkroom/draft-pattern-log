@@ -1,5 +1,6 @@
 import {
-  AI_USAGE, ENGLISH_QUALITY, LANGUAGES, LEVELS, REWORK_KEYS, STRUCTURE_KEYS, TIERS, TIME_OPTIONS, TYPE_KEYS,
+  AI_USAGE, ENGLISH_QUALITY, LANGUAGES, LEVELS, REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS,
+  STRUCTURE_KEYS, TIERS, TIME_OPTIONS, TYPE_KEYS,
   type BackupV1, type ReviewRecordV1,
 } from './model'
 
@@ -34,20 +35,29 @@ export function isReviewRecord(value: unknown): value is ReviewRecordV1 {
     !(value.problemTypes.includes('type1') && value.problemTypes.includes('type2')) &&
     typeof value.unclassifiedNote === 'string' &&
     (!value.problemTypes.includes('unclassified') || value.unclassifiedNote.trim().length > 0) &&
+    REVISION_KEYS.every(key => isOption(value[key], REVISION_LEVELS)) &&
     isOption(value.timeSpent, TIME_OPTIONS) &&
     isOptionalOption(value.surfaceEnglishQuality, ENGLISH_QUALITY) &&
     (value.draftLanguage === 'English' || value.surfaceEnglishQuality === null) &&
     typeof value.notes === 'string'
 }
 
+function normalizeRevisionFields(value: unknown): unknown {
+  if (!isObject(value)) return value
+  const missing = REVISION_KEYS.filter(key => !Object.hasOwn(value, key))
+  if (!missing.length) return value
+  return { ...value, ...Object.fromEntries(missing.map(key => [key, 'none'])) }
+}
+
 export function parseBackup(value: unknown): BackupV1 {
-  if (!isObject(value) || value.schemaVersion !== 1 || !isTimestamp(value.exportedAt) ||
-      !Array.isArray(value.records) || !value.records.every(isReviewRecord)) {
+  if (!isObject(value) || value.schemaVersion !== 1 || !isTimestamp(value.exportedAt) || !Array.isArray(value.records)) {
     throw new Error('지원하지 않는 백업 형식이거나 기록 데이터가 올바르지 않습니다.')
   }
-  const ids = value.records.map(record => record.id)
+  const records = value.records.map(normalizeRevisionFields)
+  if (!records.every(isReviewRecord)) throw new Error('지원하지 않는 백업 형식이거나 기록 데이터가 올바르지 않습니다.')
+  const ids = records.map(record => record.id)
   if (new Set(ids).size !== ids.length) throw new Error('백업에 중복된 기록 ID가 있습니다.')
-  return value as unknown as BackupV1
+  return { schemaVersion: 1, exportedAt: value.exportedAt as string, records }
 }
 
 export function loadRecords(): ReviewRecordV1[] {
@@ -96,7 +106,7 @@ export function exportCsv(records: ReviewRecordV1[]): string {
     'id', 'review_date', 'created_at', 'updated_at', 'student_name', 'draft_language', 'level', 'field',
     'school_tier', 'word_limit', 'draft_length', 'ai_usage',
     ...STRUCTURE_KEYS, 'structure_total', ...REWORK_KEYS, 'rework_total',
-    ...TYPE_KEYS, 'unclassified_note', 'time_spent', 'surface_english_quality', 'notes',
+    ...TYPE_KEYS, 'unclassified_note', ...REVISION_KEYS, 'time_spent', 'surface_english_quality', 'notes',
   ]
   const rows = records.map(record => [
     record.id, record.reviewDate, record.createdAt, record.updatedAt, record.studentName,
@@ -107,7 +117,8 @@ export function exportCsv(records: ReviewRecordV1[]): string {
     ...REWORK_KEYS.map(key => record.rework.includes(key) ? 1 : 0),
     record.rework.length,
     ...TYPE_KEYS.map(key => record.problemTypes.includes(key) ? 1 : 0),
-    record.unclassifiedNote, record.timeSpent, record.surfaceEnglishQuality, record.notes,
+    record.unclassifiedNote, ...REVISION_KEYS.map(key => record[key]),
+    record.timeSpent, record.surfaceEnglishQuality, record.notes,
   ])
   return '\uFEFF' + [headers, ...rows].map(row => row.map(csvCell).join(',')).join('\r\n')
 }

@@ -1,5 +1,5 @@
 import {
-  REWORK_KEYS, STRUCTURE_KEYS, TIME_OPTIONS, TYPE_KEYS,
+  REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS, STRUCTURE_KEYS, TIME_OPTIONS, TYPE_KEYS,
   type ReviewRecordV1, type ReworkKey, type StructureKey, type TypeKey,
 } from './model'
 
@@ -67,6 +67,16 @@ export function typeCounts(records: ReviewRecordV1[]) {
 export function reworkCounts(records: ReviewRecordV1[]) {
   return REWORK_KEYS.map(key => ({ key, count: records.filter(record => record.rework.includes(key)).length }))
     .sort((a, b) => b.count - a.count)
+}
+
+export function revisionFocusCounts(records: ReviewRecordV1[]) {
+  return REVISION_KEYS.map(key => ({
+    key,
+    levels: REVISION_LEVELS.map(level => {
+      const count = records.filter(record => record[key] === level).length
+      return { level, count, percent: records.length ? Math.round(count / records.length * 100) : 0 }
+    }),
+  }))
 }
 
 export function sortRecent(records: ReviewRecordV1[]): ReviewRecordV1[] {

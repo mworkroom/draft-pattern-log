@@ -14,6 +14,7 @@ for (const width of [1280, 2048]) {
       '.check-row',
       '.kpi-label',
       '.chart-title',
+      '.revision-table th',
     ]) {
       const fontSize = await page.locator(selector).first().evaluate(
         (element) => Number.parseFloat(getComputedStyle(element).fontSize),
@@ -22,6 +23,11 @@ for (const width of [1280, 2048]) {
     }
 
     await expect(page.getByRole('button', { name: 'Save Review' })).toBeInViewport()
+    expect(await page.locator('.revision-table-wrap').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+    await page.getByRole('tab', { name: 'Problem patterns' }).click()
+    const statsFontSize = await page.locator('.revision-stats-table td').first().evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))
+    expect(statsFontSize).toBeGreaterThanOrEqual(14)
+    expect(await page.locator('.revision-stats-wrap').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
     const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth)
     expect(pageWidth).toBeLessThanOrEqual(width)
   })

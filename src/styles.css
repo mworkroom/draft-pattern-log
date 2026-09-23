@@ -59,6 +59,20 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .section-heading h3 small { font-size: 12px; font-weight: 600; }
 .section-heading > span { color: #465775; font-size: 11px; white-space: nowrap; }
 .section-hint { margin: 4px 0 0; color: #7a89a0; font-size: 10px; }
+.revision-table-wrap, .revision-stats-wrap { width: 100%; overflow-x: auto; }
+.revision-table, .revision-stats-table { width: 100%; border-collapse: collapse; min-width: 340px; table-layout: fixed; }
+.revision-table { margin-top: 9px; }
+.revision-table th, .revision-table td, .revision-stats-table th, .revision-stats-table td { border-bottom: 1px solid #e4eaf3; padding: 9px 8px; font-size: 14px; }
+.revision-table tr:last-child th, .revision-table tr:last-child td, .revision-stats-table tr:last-child th, .revision-stats-table tr:last-child td { border-bottom: 0; }
+.revision-table th:first-child, .revision-stats-table th:first-child { width: 40%; text-align: left; }
+.revision-table thead th, .revision-stats-table thead th { color: #405675; font-weight: 700; }
+.revision-table tbody th, .revision-stats-table tbody th { color: #263b57; font-weight: 600; }
+.revision-table thead th:not(:first-child), .revision-table td, .revision-stats-table thead th:not(:first-child), .revision-stats-table td { text-align: center; }
+.revision-table td label { display: flex; align-items: center; justify-content: center; min-height: 34px; cursor: pointer; }
+.revision-table input[type='radio'] { width: 20px; height: 20px; margin: 0; accent-color: #176cdd; cursor: pointer; }
+.revision-table input[type='radio']:focus-visible { outline: 3px solid #8ebcff; outline-offset: 3px; }
+.revision-card { grid-column: 1 / -1; }
+.revision-stats-table td { color: #29415f; font-weight: 600; white-space: nowrap; }
 .form-grid.score-work { grid-template-columns: 1.15fr .9fr; gap: 13px; margin-top: 7px; }
 .score-list { min-width: 0; }
 .score-row { display: grid; grid-template-columns: 17px minmax(0, 1fr) 132px; align-items: center; gap: 4px; min-height: 27px; }

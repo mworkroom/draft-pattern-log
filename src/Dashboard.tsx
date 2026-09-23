@@ -5,11 +5,11 @@ import {
 } from 'lucide-react'
 import {
   averageStructure, EMPTY_FILTERS, filterReviews, formatMedian, groupLanguage, medianTime,
-  percentWithCount, reworkCounts, reworkMedian, scoreMedian, sortRecent, type Filters,
+  percentWithCount, reworkCounts, reworkMedian, revisionFocusCounts, scoreMedian, sortRecent, type Filters,
   typeCounts,
 } from './analytics'
 import {
-  LANGUAGES, LEVELS, REWORK_LABELS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
+  LANGUAGES, LEVELS, REWORK_LABELS, REVISION_LABELS, REVISION_LEVELS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
   TYPE_KEYS, TYPE_LABELS, type ReviewRecordV1,
 } from './model'
 
@@ -125,6 +125,16 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
       {tab === 'patterns' ? <div className="pattern-grid">
         <div className="analysis-card"><div className="card-head"><h4>Problem Type Distribution</h4><span>Multiple types per review</span></div>{typeCounts(filtered).map(({ key, count }) => <div className="progress-row" key={key}><span title={TYPE_LABELS[key]}>{TYPE_LABELS[key]}</span><div className="progress-track"><i style={{ width: filtered.length ? count / filtered.length * 100 + '%' : '0%' }}/></div><strong>{count}</strong></div>)}</div>
         <div className="analysis-card"><div className="card-head"><h4>Major Rework Trends</h4><span>Changes made in review</span></div>{reworkCounts(filtered).map(({ key, count }) => <div className="progress-row" key={key}><span>{REWORK_LABELS[key]}</span><div className="progress-track violet"><i style={{ width: filtered.length ? count / filtered.length * 100 + '%' : '0%' }}/></div><strong>{count}</strong></div>)}</div>
+        <div className="analysis-card revision-card">
+          <div className="card-head"><h4>Revision Focus</h4><span>{filtered.length ? `${filtered.length} reviews in current filters` : 'No data in current filters'}</span></div>
+          <div className="revision-stats-wrap"><table className="revision-stats-table">
+            <thead><tr><th scope="col">Area</th>{REVISION_LEVELS.map(level => <th scope="col" key={level}>{level[0].toUpperCase() + level.slice(1)}</th>)}</tr></thead>
+            <tbody>{revisionFocusCounts(filtered).map(({ key, levels }) => <tr key={key}>
+              <th scope="row">{REVISION_LABELS[key]}</th>
+              {levels.map(({ level, count, percent }) => <td key={level}>{filtered.length ? `${count} (${percent}%)` : '—'}</td>)}
+            </tr>)}</tbody>
+          </table></div>
+        </div>
         <div className="analysis-card unclassified-card"><div className="card-head"><h4>Unclassified / New Pattern</h4><strong>{unclassified.length} <small>of {filtered.length} ({filtered.length ? Math.round(unclassified.length / filtered.length * 100) : 0}%)</small></strong></div>
           {unclassified.length ? unclassified.slice(0, 5).map(record => <button className="pattern-record" type="button" key={record.id} onClick={() => onEdit(record)}><span><strong>{record.studentName}</strong><small>{record.reviewDate}</small></span><span>{record.unclassifiedNote}</span><ArrowRight size={15}/></button>) : <p className="empty-pattern">No new patterns in this range.</p>}
         </div>

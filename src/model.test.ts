@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { blankDraft, FIELD_OPTIONS, recordToDraft, toRecord, validateDraft } from './model'
-import { EMPTY_FILTERS, filterReviews, medianTime, reworkMedian, scoreMedian } from './analytics'
-import { exportCsv, parseBackup } from './storage'
+import { EMPTY_FILTERS, filterReviews, medianTime, reworkMedian, revisionFocusCounts, scoreMedian } from './analytics'
+import { backupJson, exportCsv, parseBackup } from './storage'
 
 function completeDraft() {
   const draft = blankDraft('2026-09-23')
@@ -11,10 +11,10 @@ function completeDraft() {
 }
 
 describe('review entry', () => {
-  it('keeps the eight Field choices in one list, with separate problem fields', () => {
+  it('keeps the current Field choices in one list, with separate problem fields', () => {
     expect(FIELD_OPTIONS).toEqual([
-      'Business / Management', 'Education', '공대·이공계', 'Social Sciences',
-      'Sport', 'Development Studies', 'International Relations', 'Other',
+      'Business', 'STEM', 'Sport', 'Development Studies', 'International Relations',
+      'Education', 'Social Sciences', 'UCAS', 'Foundation', 'Other',
     ])
   })
 
@@ -25,6 +25,20 @@ describe('review entry', () => {
     expect(validateDraft(draft)).toMatch(/Student Name/)
     draft.studentName = '홍길동'
     expect(validateDraft(draft)).toMatch(/Structure Score/)
+    expect([draft.revision_academic_plan, draft.revision_conclusion, draft.revision_experience_closing])
+      .toEqual(['none', 'none', 'none'])
+  })
+
+  it('records revision levels independently of Problem Types and Major Rework', () => {
+    const draft = completeDraft()
+    draft.revision_academic_plan = 'rebuild'
+    draft.revision_conclusion = 'refine'
+    draft.revision_experience_closing = 'refine'
+    expect(validateDraft(draft)).toBeNull()
+    const record = toRecord(draft)
+    expect(record.problemTypes).toEqual([])
+    expect(record.rework).toEqual([])
+    expect(recordToDraft(record).revision_academic_plan).toBe('rebuild')
   })
 
   it('requires a note for an unclassified pattern', () => {
@@ -61,6 +75,29 @@ describe('analytics and backup', () => {
     expect(() => parseBackup({ ...backup, records: [good, { ...good, id: 'other', timeSpent: '61m' }] })).toThrow()
   })
 
+  it('normalizes only missing revision fields in legacy JSON backups', () => {
+    const record = create('Legacy', 'English', '60m', 1)
+    const legacy = Object.fromEntries(Object.entries(record).filter(([key]) => !key.startsWith('revision_')))
+    const exportedAt = new Date().toISOString()
+    const restored = parseBackup({ schemaVersion: 1, exportedAt, records: [legacy] }).records[0]
+    expect([restored.revision_academic_plan, restored.revision_conclusion, restored.revision_experience_closing])
+      .toEqual(['none', 'none', 'none'])
+    expect(JSON.parse(backupJson([restored])).records[0]).toMatchObject({
+      revision_academic_plan: 'none', revision_conclusion: 'none', revision_experience_closing: 'none',
+    })
+    expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...legacy, revision_conclusion: 'invalid' }] })).toThrow()
+    expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...legacy, revision_conclusion: null }] })).toThrow()
+  })
+
+  it('counts revision levels only within the filtered reviews', () => {
+    const first = { ...create('A', 'English', '30m', 1), revision_academic_plan: 'rebuild' as const }
+    const second = { ...create('B', 'Korean', '60m', 1), revision_academic_plan: 'refine' as const }
+    const all = revisionFocusCounts([first, second])
+    expect(all[0].levels.map(item => [item.count, item.percent])).toEqual([[0, 0], [1, 50], [1, 50]])
+    const filtered = filterReviews([first, second], { ...EMPTY_FILTERS, language: 'English' })
+    expect(revisionFocusCounts(filtered)[0].levels.map(item => [item.count, item.percent])).toEqual([[0, 0], [0, 0], [1, 100]])
+  })
+
   it('preserves a previously typed Field through backup and editing', () => {
     const oldRecord = { ...create('Legacy', 'English', '60m', 1), field: 'Psychology' }
     const backup = { schemaVersion: 1, exportedAt: new Date().toISOString(), records: [oldRecord] }
@@ -72,5 +109,7 @@ describe('analytics and backup', () => {
     const record = create('홍,\"길동\"', 'English', '60m', 1)
     expect(exportCsv([record])).toContain('"\uD64D,""\uAE38\uB3D9"""')
     expect(exportCsv([record]).charCodeAt(0)).toBe(0xfeff)
+    expect(exportCsv([record])).toContain('"revision_academic_plan","revision_conclusion","revision_experience_closing"')
+    expect(exportCsv([record])).toContain('"none","none","none"')
   })
 })

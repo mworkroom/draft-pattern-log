@@ -4,8 +4,8 @@ test('chosen defaults and review save persist after reload', async ({ page }) =>
   await page.goto('./')
   await expect(page.locator('#field')).toHaveValue('')
   await expect(page.locator('#field option')).toHaveText([
-    'Select a field', 'Business / Management', 'Education', '공대·이공계',
-    'Social Sciences', 'Sport', 'Development Studies', 'International Relations', 'Other',
+    'Select a field', 'Business', 'STEM', 'Sport', 'Development Studies',
+    'International Relations', 'Education', 'Social Sciences', 'UCAS', 'Foundation', 'Other',
   ])
   for (const [group, choice] of [
     ['Draft Language', 'English'], ['Level', "Master's"], ['School Tier', 'Mid'],
@@ -32,6 +32,53 @@ test('chosen defaults and review save persist after reload', async ({ page }) =>
   await expect(page.getByText('0 reviews in current filters')).toBeVisible()
   await fieldFilter.selectOption('Development Studies')
   await expect(page.getByText('1 review in current filters')).toBeVisible()
+})
+
+test('revision focus saves independently and appears in filtered dashboard statistics', async ({ page }) => {
+  await page.goto('./')
+  const form = page.getByRole('region', { name: 'Review editor' })
+  await expect(form.getByRole('radio', { name: 'Academic Plan: none' })).toBeChecked()
+  await form.getByRole('radio', { name: 'Academic Plan: rebuild' }).check()
+  await form.getByRole('radio', { name: 'Conclusion: refine' }).check()
+  await form.getByRole('radio', { name: 'Experience Closing: refine' }).check()
+  await page.locator('#student-name').fill('QA Revision')
+  for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '1' }).click()
+  await page.getByRole('button', { name: 'Save Review' }).click()
+  await page.getByRole('tab', { name: 'Problem patterns' }).click()
+  const stats = page.locator('.revision-card')
+  await expect(stats.getByRole('row', { name: /Academic Plan/ })).toContainText('1 (100%)')
+  await expect(stats.getByRole('row', { name: /Conclusion/ })).toContainText('1 (100%)')
+  await page.getByRole('button', { name: 'Filters' }).click()
+  await page.locator('.filters-panel').getByRole('combobox', { name: 'Language' }).selectOption('Korean')
+  await expect(stats).toContainText('No data in current filters')
+  await expect(stats.getByRole('row', { name: /Academic Plan/ })).toContainText('—')
+  await page.reload()
+  await page.getByRole('button', { name: 'QA Revision', exact: true }).click()
+  await expect(form.getByRole('radio', { name: 'Academic Plan: rebuild' })).toBeChecked()
+  await expect(form.getByRole('radio', { name: 'Conclusion: refine' })).toBeChecked()
+  await expect(page.locator('.type-choice input:checked')).toHaveCount(0)
+  await expect(page.locator('.check-row input:checked')).toHaveCount(0)
+})
+
+test('legacy localStorage reviews without revision fields load as None', async ({ page }) => {
+  await page.goto('./')
+  await page.locator('#student-name').fill('QA Old Review')
+  for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '1' }).click()
+  await page.getByRole('button', { name: 'Save Review' }).click()
+  await page.evaluate(() => {
+    const key = 'sop-score-tracker:records:v1'
+    const backup = JSON.parse(localStorage.getItem(key)!)
+    delete backup.records[0].revision_academic_plan
+    delete backup.records[0].revision_conclusion
+    delete backup.records[0].revision_experience_closing
+    localStorage.setItem(key, JSON.stringify(backup))
+  })
+  await page.reload()
+  await expect(page.locator('.storage-alert')).toHaveCount(0)
+  await page.getByRole('button', { name: 'QA Old Review', exact: true }).click()
+  for (const area of ['Academic Plan', 'Conclusion', 'Experience Closing']) {
+    await expect(page.getByRole('radio', { name: `${area}: none` })).toBeChecked()
+  }
 })
 
 test('an old free-text Field stays visible until it is recategorized', async ({ page }) => {
