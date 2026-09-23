@@ -6,6 +6,7 @@ import {
 
 export const STORAGE_KEY = 'sop-score-tracker:records:v1'
 const BACKUP_KEY = 'sop-score-tracker:last-backup-at'
+const RETIRED_REWORK_KEYS = new Set(['addMotivationBridge', 'rebuildAcademicPlan', 'rebuildConclusion'])
 
 type UnknownObject = Record<string, unknown>
 const isObject = (value: unknown): value is UnknownObject => typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -42,18 +43,27 @@ export function isReviewRecord(value: unknown): value is ReviewRecordV1 {
     typeof value.notes === 'string'
 }
 
-function normalizeRevisionFields(value: unknown): unknown {
+function normalizeRecord(value: unknown): unknown {
   if (!isObject(value)) return value
   const missing = REVISION_KEYS.filter(key => !Object.hasOwn(value, key))
-  if (!missing.length) return value
-  return { ...value, ...Object.fromEntries(missing.map(key => [key, 'none'])) }
+  const originalRework = value.rework
+  const rework = Array.isArray(originalRework)
+    ? originalRework.filter(item => typeof item !== 'string' || !RETIRED_REWORK_KEYS.has(item))
+    : null
+  const removedRework = Array.isArray(originalRework) && rework !== null && rework.length !== originalRework.length
+  if (!missing.length && !removedRework) return value
+  return {
+    ...value,
+    ...(removedRework ? { rework } : {}),
+    ...Object.fromEntries(missing.map(key => [key, 'none'])),
+  }
 }
 
 export function parseBackup(value: unknown): BackupV1 {
   if (!isObject(value) || value.schemaVersion !== 1 || !isTimestamp(value.exportedAt) || !Array.isArray(value.records)) {
     throw new Error('지원하지 않는 백업 형식이거나 기록 데이터가 올바르지 않습니다.')
   }
-  const records = value.records.map(normalizeRevisionFields)
+  const records = value.records.map(normalizeRecord)
   if (!records.every(isReviewRecord)) throw new Error('지원하지 않는 백업 형식이거나 기록 데이터가 올바르지 않습니다.')
   const ids = records.map(record => record.id)
   if (new Set(ids).size !== ids.length) throw new Error('백업에 중복된 기록 ID가 있습니다.')

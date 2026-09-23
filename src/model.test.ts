@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { blankDraft, FIELD_OPTIONS, recordToDraft, toRecord, validateDraft } from './model'
-import { EMPTY_FILTERS, filterReviews, medianTime, reworkMedian, revisionFocusCounts, scoreMedian } from './analytics'
+import { blankDraft, FIELD_OPTIONS, REWORK_KEYS, REVISION_KEYS, recordToDraft, toRecord, validateDraft } from './model'
+import { EMPTY_FILTERS, filterReviews, medianTime, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian } from './analytics'
 import { backupJson, exportCsv, parseBackup } from './storage'
 
 function completeDraft() {
@@ -11,6 +11,11 @@ function completeDraft() {
 }
 
 describe('review entry', () => {
+  it('keeps only distinct rework actions and orders revision areas as requested', () => {
+    expect(REWORK_KEYS).toEqual(['mergeParagraphs', 'moveContent', 'compressExperience', 'inferHiddenLogic'])
+    expect(REVISION_KEYS).toEqual(['revision_experience_closing', 'revision_academic_plan', 'revision_conclusion'])
+  })
+
   it('keeps the current Field choices in one list, with separate problem fields', () => {
     expect(FIELD_OPTIONS).toEqual([
       'Business', 'STEM', 'Sport', 'Development Studies', 'International Relations',
@@ -89,13 +94,28 @@ describe('analytics and backup', () => {
     expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...legacy, revision_conclusion: null }] })).toThrow()
   })
 
+  it('drops retired rework checks from old records while retaining the remaining actions', () => {
+    const record = create('Legacy Rework', 'English', '60m', 1)
+    const oldRecord = {
+      ...record,
+      rework: ['mergeParagraphs', 'addMotivationBridge', 'rebuildAcademicPlan', 'rebuildConclusion'],
+    }
+    const exportedAt = new Date().toISOString()
+    const restored = parseBackup({ schemaVersion: 1, exportedAt, records: [oldRecord] }).records[0]
+    expect(restored.rework).toEqual(['mergeParagraphs'])
+    expect(exportCsv([restored])).not.toMatch(/addMotivationBridge|rebuildAcademicPlan|rebuildConclusion/)
+    expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...record, rework: ['unknownAction'] }] })).toThrow()
+  })
+
   it('counts revision levels only within the filtered reviews', () => {
     const first = { ...create('A', 'English', '30m', 1), revision_academic_plan: 'rebuild' as const }
     const second = { ...create('B', 'Korean', '60m', 1), revision_academic_plan: 'refine' as const }
     const all = revisionFocusCounts([first, second])
-    expect(all[0].levels.map(item => [item.count, item.percent])).toEqual([[0, 0], [1, 50], [1, 50]])
+    expect(all[1].key).toBe('revision_academic_plan')
+    expect(all[1].levels.map(item => [item.count, item.percent])).toEqual([[0, 0], [1, 50], [1, 50]])
     const filtered = filterReviews([first, second], { ...EMPTY_FILTERS, language: 'English' })
-    expect(revisionFocusCounts(filtered)[0].levels.map(item => [item.count, item.percent])).toEqual([[0, 0], [0, 0], [1, 100]])
+    expect(revisionFocusCounts(filtered)[1].levels.map(item => [item.count, item.percent])).toEqual([[0, 0], [0, 0], [1, 100]])
+    expect(revisionRebuildPercent(filtered, 'revision_academic_plan')).toEqual({ count: 1, total: 1, percent: 100 })
   })
 
   it('preserves a previously typed Field through backup and editing', () => {
@@ -109,7 +129,7 @@ describe('analytics and backup', () => {
     const record = create('홍,\"길동\"', 'English', '60m', 1)
     expect(exportCsv([record])).toContain('"\uD64D,""\uAE38\uB3D9"""')
     expect(exportCsv([record]).charCodeAt(0)).toBe(0xfeff)
-    expect(exportCsv([record])).toContain('"revision_academic_plan","revision_conclusion","revision_experience_closing"')
+    expect(exportCsv([record])).toContain('"revision_experience_closing","revision_academic_plan","revision_conclusion"')
     expect(exportCsv([record])).toContain('"none","none","none"')
   })
 })

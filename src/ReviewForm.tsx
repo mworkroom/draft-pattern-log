@@ -137,7 +137,7 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
       {error ? <div className="form-error" role="alert">{error}</div> : null}
       <div className="footer-summary">
         <div className="summary-box blue"><span>Structure</span><strong>{structureTotal(draft.structure)} <small>/ 16</small></strong></div>
-        <div className="summary-box red"><span>Rework</span><strong>{draft.rework.length} <small>/ 7</small></strong></div>
+        <div className="summary-box red"><span>Rework</span><strong>{draft.rework.length} <small>/ {REWORK_KEYS.length}</small></strong></div>
         <div className="summary-box violet"><span>Problem Types</span><strong title={selectedTypes}>{selectedTypes}</strong></div>
         <button className="primary-button" type="button" onClick={onSave}>{editing ? 'Update Review' : 'Save Review'}</button>
       </div>

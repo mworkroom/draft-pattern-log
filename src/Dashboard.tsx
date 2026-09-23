@@ -5,11 +5,11 @@ import {
 } from 'lucide-react'
 import {
   averageStructure, EMPTY_FILTERS, filterReviews, formatMedian, groupLanguage, medianTime,
-  percentWithCount, reworkCounts, reworkMedian, revisionFocusCounts, scoreMedian, sortRecent, type Filters,
+  reworkCounts, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, sortRecent, type Filters,
   typeCounts,
 } from './analytics'
 import {
-  LANGUAGES, LEVELS, REWORK_LABELS, REVISION_LABELS, REVISION_LEVELS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
+  LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS, REVISION_LABELS, REVISION_LEVELS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
   TYPE_KEYS, TYPE_LABELS, type ReviewRecordV1,
 } from './model'
 
@@ -69,10 +69,10 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
   const noData = filtered.length === 0
   const structureMedian = scoreMedian(filtered)
   const medianRework = reworkMedian(filtered)
-  const academicKr = percentWithCount(korean, 'rebuildAcademicPlan')
-  const academicEn = percentWithCount(english, 'rebuildAcademicPlan')
-  const conclusionKr = percentWithCount(korean, 'rebuildConclusion')
-  const conclusionEn = percentWithCount(english, 'rebuildConclusion')
+  const academicKr = revisionRebuildPercent(korean, 'revision_academic_plan')
+  const academicEn = revisionRebuildPercent(english, 'revision_academic_plan')
+  const conclusionKr = revisionRebuildPercent(korean, 'revision_conclusion')
+  const conclusionEn = revisionRebuildPercent(english, 'revision_conclusion')
   const topIssues = reworkCounts(filtered).filter(issue => issue.count > 0).slice(0, 4)
   const unclassified = sortRecent(filtered.filter(record => record.problemTypes.includes('unclassified')))
 
@@ -100,7 +100,7 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
         <Kpi icon={<BookOpenCheck size={18}/>} label="Korean Reviews" value={String(korean.length)} foot={filtered.length ? Math.round(korean.length / filtered.length * 100) + '% of total' : 'No data'} tone="tone-red" />
         <Kpi icon={<BookOpenCheck size={18}/>} label="English Reviews" value={String(english.length)} foot={filtered.length ? Math.round(english.length / filtered.length * 100) + '% of total' : 'No data'} tone="tone-sky" />
         <Kpi icon={<ChartNoAxesColumnIncreasing size={18}/>} label="Median Structure" value={structureMedian === null ? '—' : formatMedian(structureMedian) + ' / 16'} foot="out of 16" tone="tone-green" />
-        <Kpi icon={<Wrench size={18}/>} label="Median Rework" value={medianRework === null ? '—' : formatMedian(medianRework) + ' / 7'} foot="out of 7" tone="tone-purple" />
+        <Kpi icon={<Wrench size={18}/>} label="Median Rework" value={medianRework === null ? '—' : formatMedian(medianRework) + ' / ' + REWORK_KEYS.length} foot={'out of ' + REWORK_KEYS.length} tone="tone-purple" />
         <Kpi icon={<Clock3 size={18}/>} label="Median Time" value={medianTime(filtered)} foot="selected time band" tone="tone-amber" />
       </div>
 
@@ -115,7 +115,7 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
       </div>
       {tab === 'comparison' ? <div className="comparison-grid">
         <PairBars title="Structure Score (out of 16)" korean={scoreMedian(korean)} english={scoreMedian(english)} max={16} note={'n=' + korean.length + ' / n=' + english.length} />
-        <PairBars title="Rework Count (out of 7)" korean={reworkMedian(korean)} english={reworkMedian(english)} max={7} note={'n=' + korean.length + ' / n=' + english.length} />
+        <PairBars title={'Rework Count (out of ' + REWORK_KEYS.length + ')'} korean={reworkMedian(korean)} english={reworkMedian(english)} max={REWORK_KEYS.length} note={'n=' + korean.length + ' / n=' + english.length} />
         <PairBars title="Academic Plan Rebuild Rate" korean={korean.length ? academicKr.percent : null} english={english.length ? academicEn.percent : null} max={100} suffix="%" note={academicKr.count + '/' + academicKr.total + ' · ' + academicEn.count + '/' + academicEn.total} />
         <PairBars title="Conclusion Rebuild Rate" korean={korean.length ? conclusionKr.percent : null} english={english.length ? conclusionEn.percent : null} max={100} suffix="%" note={conclusionKr.count + '/' + conclusionKr.total + ' · ' + conclusionEn.count + '/' + conclusionEn.total} />
       </div> : null}
@@ -142,7 +142,7 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
 
       <div className="recent-head"><div><h3>Recent Reviews</h3><p>{filtered.length} {filtered.length === 1 ? 'review' : 'reviews'} in current filters</p></div><div className="recent-actions"><label className="table-search"><Search size={15}/><input aria-label="Search recent reviews" placeholder="Search name or field" value={search} onChange={event => setSearch(event.target.value)} /></label><button type="button" className="text-button" onClick={() => setShowAll(value => !value)}>{showAll ? 'Show fewer' : 'View all reviews'} <ArrowRight size={15}/></button></div></div>
       <div className="table-wrap"><table className="reviews-table"><thead><tr><th>Date</th><th>Student</th><th>Lang</th><th>Level</th><th>Field</th><th>Structure</th><th>Rework</th><th>Type</th><th>Time</th><th aria-label="Actions"/></tr></thead><tbody>
-        {visibleRows.map(record => <tr key={record.id}><td>{record.reviewDate}</td><td><button className="student-link" type="button" onClick={() => onEdit(record)}>{record.studentName}</button></td><td><span className={'language-pill ' + (record.draftLanguage === 'Korean' ? 'korean' : 'english')}>{record.draftLanguage}</span></td><td>{record.level ?? '—'}</td><td>{record.field || '—'}</td><td>{STRUCTURE_KEYS.reduce((sum, key) => sum + record.structure[key], 0)} / 16</td><td>{record.rework.length} / 7</td><td className="type-cell">{record.problemTypes.length ? record.problemTypes.map(key => key === 'unclassified' ? 'New' : key.replace('type', 'T')).join(', ') : '—'}</td><td>{record.timeSpent}</td><td><div className="row-actions"><button type="button" aria-label={'Edit ' + record.studentName} onClick={() => onEdit(record)}><Pencil size={14}/></button><button type="button" aria-label={'Delete ' + record.studentName} onClick={() => onDelete(record)}><Trash2 size={14}/></button></div></td></tr>)}
+        {visibleRows.map(record => <tr key={record.id}><td>{record.reviewDate}</td><td><button className="student-link" type="button" onClick={() => onEdit(record)}>{record.studentName}</button></td><td><span className={'language-pill ' + (record.draftLanguage === 'Korean' ? 'korean' : 'english')}>{record.draftLanguage}</span></td><td>{record.level ?? '—'}</td><td>{record.field || '—'}</td><td>{STRUCTURE_KEYS.reduce((sum, key) => sum + record.structure[key], 0)} / 16</td><td>{record.rework.length} / {REWORK_KEYS.length}</td><td className="type-cell">{record.problemTypes.length ? record.problemTypes.map(key => key === 'unclassified' ? 'New' : key.replace('type', 'T')).join(', ') : '—'}</td><td>{record.timeSpent}</td><td><div className="row-actions"><button type="button" aria-label={'Edit ' + record.studentName} onClick={() => onEdit(record)}><Pencil size={14}/></button><button type="button" aria-label={'Delete ' + record.studentName} onClick={() => onDelete(record)}><Trash2 size={14}/></button></div></td></tr>)}
         {visibleRows.length === 0 ? <tr><td className="empty-table" colSpan={10}>{noData && records.length === 0 ? 'No reviews yet. Save the first review to start tracking.' : 'No reviews match the current filters or search.'}</td></tr> : null}
       </tbody></table></div>
       {topIssues.length ? <div className="issue-strip"><div className="issue-icon">✦</div><div><strong>Top issue trends</strong><small>Most common rework in selected reviews</small></div><div className="issue-tags">{topIssues.map(issue => <span key={issue.key}>{REWORK_LABELS[issue.key]} <b>{issue.count}</b></span>)}</div></div> : null}

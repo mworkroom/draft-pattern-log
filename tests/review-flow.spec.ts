@@ -37,6 +37,12 @@ test('chosen defaults and review save persist after reload', async ({ page }) =>
 test('revision focus saves independently and appears in filtered dashboard statistics', async ({ page }) => {
   await page.goto('./')
   const form = page.getByRole('region', { name: 'Review editor' })
+  await expect(form.locator('.check-row span')).toHaveText([
+    'Merge Paragraphs', 'Move Content', 'Compress Experience', 'Infer Hidden Logic',
+  ])
+  await expect(form.locator('.revision-table tbody th')).toHaveText([
+    'Experience Closing', 'Academic Plan', 'Conclusion',
+  ])
   await expect(form.getByRole('radio', { name: 'Academic Plan: none' })).toBeChecked()
   await form.getByRole('radio', { name: 'Academic Plan: rebuild' }).check()
   await form.getByRole('radio', { name: 'Conclusion: refine' }).check()
@@ -44,8 +50,10 @@ test('revision focus saves independently and appears in filtered dashboard stati
   await page.locator('#student-name').fill('QA Revision')
   for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '1' }).click()
   await page.getByRole('button', { name: 'Save Review' }).click()
+  await expect(page.locator('.chart-card').filter({ hasText: 'Academic Plan Rebuild Rate' })).toContainText('100%')
   await page.getByRole('tab', { name: 'Problem patterns' }).click()
   const stats = page.locator('.revision-card')
+  await expect(stats.locator('tbody th')).toHaveText(['Experience Closing', 'Academic Plan', 'Conclusion'])
   await expect(stats.getByRole('row', { name: /Academic Plan/ })).toContainText('1 (100%)')
   await expect(stats.getByRole('row', { name: /Conclusion/ })).toContainText('1 (100%)')
   await page.getByRole('button', { name: 'Filters' }).click()
@@ -71,11 +79,13 @@ test('legacy localStorage reviews without revision fields load as None', async (
     delete backup.records[0].revision_academic_plan
     delete backup.records[0].revision_conclusion
     delete backup.records[0].revision_experience_closing
+    backup.records[0].rework = ['rebuildAcademicPlan', 'rebuildConclusion', 'addMotivationBridge']
     localStorage.setItem(key, JSON.stringify(backup))
   })
   await page.reload()
   await expect(page.locator('.storage-alert')).toHaveCount(0)
   await page.getByRole('button', { name: 'QA Old Review', exact: true }).click()
+  await expect(page.locator('.footer-summary .summary-box.red')).toContainText('0 / 4')
   for (const area of ['Academic Plan', 'Conclusion', 'Experience Closing']) {
     await expect(page.getByRole('radio', { name: `${area}: none` })).toBeChecked()
   }

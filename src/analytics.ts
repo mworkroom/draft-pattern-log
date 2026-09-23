@@ -1,6 +1,6 @@
 import {
   REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS, STRUCTURE_KEYS, TIME_OPTIONS, TYPE_KEYS,
-  type ReviewRecordV1, type ReworkKey, type StructureKey, type TypeKey,
+  type ReviewRecordV1, type RevisionKey, type StructureKey, type TypeKey,
 } from './model'
 
 export interface Filters {
@@ -55,8 +55,8 @@ export function averageStructure(records: ReviewRecordV1[], key: StructureKey): 
   return (records.reduce((sum, record) => sum + record.structure[key], 0) / records.length).toFixed(1)
 }
 
-export function percentWithCount(records: ReviewRecordV1[], key: ReworkKey): { percent: number; count: number; total: number } {
-  const count = records.filter(record => record.rework.includes(key)).length
+export function revisionRebuildPercent(records: ReviewRecordV1[], key: RevisionKey): { percent: number; count: number; total: number } {
+  const count = records.filter(record => record[key] === 'rebuild').length
   return { count, total: records.length, percent: records.length ? Math.round(count / records.length * 100) : 0 }
 }
 

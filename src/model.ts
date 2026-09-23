@@ -13,14 +13,11 @@ export const REWORK_KEYS = [
   'mergeParagraphs',
   'moveContent',
   'compressExperience',
-  'addMotivationBridge',
-  'rebuildAcademicPlan',
-  'rebuildConclusion',
   'inferHiddenLogic',
 ] as const
 
 export const TYPE_KEYS = ['type1', 'type2', 'type3', 'type4', 'unclassified'] as const
-export const REVISION_KEYS = ['revision_academic_plan', 'revision_conclusion', 'revision_experience_closing'] as const
+export const REVISION_KEYS = ['revision_experience_closing', 'revision_academic_plan', 'revision_conclusion'] as const
 export const REVISION_LEVELS = ['none', 'refine', 'rebuild'] as const
 export const TIME_OPTIONS = ['20m', '30m', '45m', '60m', '90m', '120m+'] as const
 export const LANGUAGES = ['English', 'Korean'] as const
@@ -107,9 +104,6 @@ export const REWORK_LABELS: Record<ReworkKey, string> = {
   mergeParagraphs: 'Merge Paragraphs',
   moveContent: 'Move Content',
   compressExperience: 'Compress Experience',
-  addMotivationBridge: 'Add Motivation Bridge',
-  rebuildAcademicPlan: 'Rebuild Academic Plan',
-  rebuildConclusion: 'Rebuild Conclusion',
   inferHiddenLogic: 'Infer Hidden Logic',
 }
 
