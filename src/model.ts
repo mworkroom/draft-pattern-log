@@ -130,9 +130,9 @@ export const TYPE_HELP: Record<TypeKey, string> = {
 }
 
 export const REVISION_LABELS: Record<RevisionKey, string> = {
-  revision_academic_plan: 'Academic Plan',
-  revision_conclusion: 'Conclusion',
   revision_experience_closing: 'Experience Closing',
+  revision_academic_plan: 'Academic Plan',
+  revision_conclusion: 'Conclusion',  
 }
 
 export const REVISION_HELP: Record<RevisionKey, Record<RevisionLevel, string>> = {
