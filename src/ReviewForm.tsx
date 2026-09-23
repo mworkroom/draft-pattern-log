@@ -59,7 +59,7 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
 
       <div className="form-grid two">
         <div className="field-block"><label>Draft Language <span className="required">*</span></label>
-          <Segmented options={LANGUAGES} value={draft.draftLanguage} label="Draft Language" onChange={value => onChange({ ...draft, draftLanguage: value, surfaceEnglishQuality: value === 'Korean' ? null : draft.surfaceEnglishQuality })} />
+          <Segmented options={LANGUAGES} value={draft.draftLanguage} label="Draft Language" onChange={value => onChange({ ...draft, draftLanguage: value, surfaceEnglishQuality: value === 'Korean' ? null : draft.surfaceEnglishQuality ?? 'Average' })} />
         </div>
         <div className="field-block"><label>Level</label><Segmented options={LEVELS} value={draft.level} label="Level" onChange={value => update('level', value)} /></div>
       </div>
@@ -74,7 +74,7 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
       </div>
 
       <div className="form-grid three">
-        <div className="field-block"><label htmlFor="word-limit">Word Limit</label><input id="word-limit" type="number" inputMode="numeric" min="0" max="100000" placeholder="e.g. 800" value={draft.wordLimit} onChange={event => update('wordLimit', event.target.value)} /></div>
+        <div className="field-block"><label htmlFor="word-limit">Word Limit</label><input id="word-limit" type="number" inputMode="numeric" min="0" max="100000" value={draft.wordLimit} onChange={event => update('wordLimit', event.target.value)} /></div>
         <div className="field-block"><label htmlFor="draft-length">Draft Length</label><input id="draft-length" type="number" inputMode="numeric" min="0" max="100000" placeholder="e.g. 950" value={draft.draftLength} onChange={event => update('draftLength', event.target.value)} /></div>
         <div className="field-block"><label>AI Usage</label><Segmented options={AI_USAGE} value={draft.aiUsage} label="AI Usage" onChange={value => update('aiUsage', value)} /></div>
       </div>

@@ -167,7 +167,7 @@ export function blankDraft(reviewDate = localToday()): ReviewDraft {
     level: "Master's",
     field: '',
     schoolTier: 'Mid',
-    wordLimit: '',
+    wordLimit: '500',
     draftLength: '',
     aiUsage: 'Yes',
     structure: Object.fromEntries(STRUCTURE_KEYS.map(key => [key, null])) as StructureScores,
@@ -178,7 +178,7 @@ export function blankDraft(reviewDate = localToday()): ReviewDraft {
     revision_conclusion: 'none',
     revision_experience_closing: 'none',
     timeSpent: '60m',
-    surfaceEnglishQuality: null,
+    surfaceEnglishQuality: 'Average',
     notes: '',
   }
 }
