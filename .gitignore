@@ -11,3 +11,4 @@ backups/
 exports/
 *.backup.json
 *.export.csv
+README.md
