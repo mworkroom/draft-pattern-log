@@ -3,7 +3,7 @@ import {
   type BackupV1, type ReviewRecordV1,
 } from './model'
 
-const STORAGE_KEY = 'sop-score-tracker:records:v1'
+export const STORAGE_KEY = 'sop-score-tracker:records:v1'
 const BACKUP_KEY = 'sop-score-tracker:last-backup-at'
 
 type UnknownObject = Record<string, unknown>
@@ -60,6 +60,7 @@ export function loadRecords(): ReviewRecordV1[] {
 export function saveRecords(records: ReviewRecordV1[]): void {
   const backup: BackupV1 = { schemaVersion: 1, exportedAt: new Date().toISOString(), records }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(backup))
+  localStorage.removeItem(BACKUP_KEY)
 }
 
 export interface ReviewRepository {

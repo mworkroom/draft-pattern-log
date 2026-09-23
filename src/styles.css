@@ -225,3 +225,28 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .issue-strip { flex-wrap: wrap; }
   .issue-tags { width: 100%; justify-content: flex-start; }
 }
+
+.backup-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 20px;
+  border-bottom: 1px solid #d8e4f2;
+  background: #f4f9ff;
+  color: #28486f;
+}
+.backup-strip.ready { background: #f1fbf7; border-color: #ccebdc; color: #236747; }
+.backup-strip.setup, .backup-strip.writing, .backup-strip.permission { background: #fffaf0; border-color: #f0dfb9; color: #76551d; }
+.backup-strip.conflict, .backup-strip.error { background: #fff4f5; border-color: #f4cdd2; color: #933747; }
+.backup-strip-copy { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 10px; min-width: 0; }
+.backup-strip-copy strong { font-size: 14px; white-space: nowrap; }
+.backup-strip-copy span { font-size: 13px; line-height: 1.4; }
+.backup-strip-actions { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.backup-strip > .text-button { margin-left: auto; }
+.backup-strip .tool-button { font-size: 14px; padding: 0 12px; white-space: nowrap; }
+.backup-strip .text-button { font-size: 14px; }
+@media (max-width: 1100px) {
+  .backup-strip { flex-wrap: wrap; padding: 10px 14px; }
+  .backup-strip-actions { margin-left: 0; justify-content: flex-start; }
+}
