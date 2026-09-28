@@ -31,18 +31,19 @@ export const FIELD_OPTIONS = [
   'STEM',
   'Sport',
   'Development Studies',
-  'International Relations',
-  'Education',  
+  'International Relations',  
+  'Public Policy',
+  'Helping Professions',  
   'Social Sciences',
   'UCAS',
   'Foundation',
   'Other',
 ] as const
 export const BACKGROUND_OPTIONS = [
-  'Public Sector / Civil Service',
   'Corporate',
-  'NGO / International Development',
   'Fresh Graduate',
+  'Public Sector',
+  'International Development',
   'Other',
 ] as const
 
