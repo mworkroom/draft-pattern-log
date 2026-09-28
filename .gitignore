@@ -12,3 +12,10 @@ exports/
 *.backup.json
 *.export.csv
 README.md
+
+
+# Personal notes / local-only references
+docs/ideas/
+docs/project specs/
+docs/private/
+docs/local/

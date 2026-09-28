@@ -129,3 +129,32 @@ test('problem type rules block an empty new-pattern note', async ({ page }) => {
   await page.getByRole('button', { name: 'Save Review' }).click()
   await expect(page.getByRole('button', { name: 'QA Pattern', exact: true })).toBeVisible()
 })
+
+test('Type 5 shares the existing card flow and appears in filtered distribution after reload', async ({ page }) => {
+  await page.goto('./')
+  const form = page.getByRole('region', { name: 'Review editor' })
+  await expect(form.locator('.type-choice strong')).toHaveText([
+    'Type 1 · Length + Structure', 'Type 2 · Structure', 'Type 3 · Experience / Plan',
+    'Type 4 · Delayed-point', 'Type 5 · Career-summary / CV-style', 'Unclassified / New Pattern',
+  ])
+  const careerType = form.locator('.type-choice').filter({ hasText: 'Type 5 · Career-summary / CV-style' })
+  await expect(careerType.locator('small')).toHaveText('경력 전체를 업무 분야로 요약해 구체적 사례와 학업 동기가 드러나지 않음')
+  await page.locator('#student-name').fill('QA Career Summary')
+  for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '1' }).click()
+  await form.locator('.type-choice').filter({ hasText: 'Type 3' }).click()
+  await careerType.click()
+  await expect(form.locator('.type-choice input:checked')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Save Review' }).click()
+  await expect(page.getByRole('row', { name: /QA Career Summary/ })).toContainText('T3, T5')
+  await page.reload()
+  await page.getByRole('tab', { name: 'Problem patterns' }).click()
+  const distribution = page.locator('.analysis-card').filter({ hasText: 'Problem Type Distribution' })
+  await expect(distribution.locator('.progress-row').filter({ hasText: 'Type 5 · Career-summary / CV-style' }).locator('strong')).toHaveText('1')
+  await page.getByRole('button', { name: 'Filters' }).click()
+  await page.locator('.filters-panel').getByRole('combobox', { name: 'Problem Type' }).selectOption('type5')
+  await expect(page.getByText('1 review in current filters')).toBeVisible()
+  await expect(distribution.locator('.progress-row').filter({ hasText: 'Type 5 · Career-summary / CV-style' }).locator('strong')).toHaveText('1')
+  await page.getByRole('button', { name: 'QA Career Summary', exact: true }).click()
+  await expect(form.locator('.type-choice').filter({ hasText: 'Type 3' }).locator('input')).toBeChecked()
+  await expect(careerType.locator('input')).toBeChecked()
+})

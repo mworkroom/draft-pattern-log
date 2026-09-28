@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { blankDraft, FIELD_OPTIONS, REWORK_KEYS, REVISION_KEYS, recordToDraft, toRecord, validateDraft } from './model'
-import { EMPTY_FILTERS, filterReviews, medianTime, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian } from './analytics'
+import { blankDraft, FIELD_OPTIONS, REWORK_KEYS, REVISION_KEYS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
+import { EMPTY_FILTERS, filterReviews, medianTime, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, typeCounts } from './analytics'
 import { backupJson, exportCsv, parseBackup } from './storage'
 
 function completeDraft() {
@@ -53,6 +53,16 @@ describe('review entry', () => {
     draft.unclassifiedNote = '새 구조 패턴'
     expect(validateDraft(draft)).toBeNull()
   })
+
+  it('saves Type 5 alongside existing types in the requested order', () => {
+    expect(TYPE_KEYS).toEqual(['type1', 'type2', 'type3', 'type4', 'type5', 'unclassified'])
+    expect(TYPE_LABELS.type5).toBe('Type 5 · Career-summary / CV-style')
+    expect(TYPE_HELP.type5).toBe('경력 전체를 업무 분야로 요약해 구체적 사례와 학업 동기가 드러나지 않음')
+    const draft = completeDraft()
+    draft.problemTypes = ['type1', 'type3', 'type4', 'type5']
+    expect(validateDraft(draft)).toBeNull()
+    expect(recordToDraft(toRecord(draft)).problemTypes).toEqual(draft.problemTypes)
+  })
 })
 
 describe('analytics and backup', () => {
@@ -78,6 +88,25 @@ describe('analytics and backup', () => {
     const backup = { schemaVersion: 1, exportedAt: new Date().toISOString(), records: [good] }
     expect(parseBackup(backup).records).toHaveLength(1)
     expect(() => parseBackup({ ...backup, records: [good, { ...good, id: 'other', timeSpent: '61m' }] })).toThrow()
+  })
+
+  it('restores Type 5 while preserving old records and counts only matching filtered reviews', () => {
+    const legacy = create('Legacy', 'English', '60m', 1)
+    legacy.problemTypes = ['type3']
+    const current = create('Career Summary', 'Korean', '30m', 1)
+    current.problemTypes = ['type3', 'type5']
+    const restored = parseBackup({ schemaVersion: 1, exportedAt: new Date().toISOString(), records: [legacy, current] }).records
+    expect(restored.map(record => record.problemTypes)).toEqual([['type3'], ['type3', 'type5']])
+    expect(JSON.parse(backupJson(restored)).records[1].problemTypes).toEqual(['type3', 'type5'])
+    expect(filterReviews(restored, { ...EMPTY_FILTERS, type: 'type5' }).map(record => record.studentName)).toEqual(['Career Summary'])
+    expect(typeCounts(restored).map(({ key, count }) => [key, count])).toEqual([
+      ['type1', 0], ['type2', 0], ['type3', 2], ['type4', 0], ['type5', 1], ['unclassified', 0],
+    ])
+    expect(typeCounts(filterReviews(restored, { ...EMPTY_FILTERS, language: 'English' })).find(item => item.key === 'type5')?.count).toBe(0)
+    const [headers, oldRow, currentRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
+    const type5Index = headers.indexOf('"type5"')
+    expect(type5Index).toBe(headers.indexOf('"unclassified"') - 1)
+    expect([oldRow[type5Index], currentRow[type5Index]]).toEqual(['"0"', '"1"'])
   })
 
   it('normalizes only missing revision fields in legacy JSON backups', () => {

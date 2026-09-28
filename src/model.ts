@@ -16,7 +16,7 @@ export const REWORK_KEYS = [
   'inferHiddenLogic',
 ] as const
 
-export const TYPE_KEYS = ['type1', 'type2', 'type3', 'type4', 'unclassified'] as const
+export const TYPE_KEYS = ['type1', 'type2', 'type3', 'type4', 'type5', 'unclassified'] as const
 export const REVISION_KEYS = ['revision_experience_closing', 'revision_academic_plan', 'revision_conclusion'] as const
 export const REVISION_LEVELS = ['none', 'refine', 'rebuild'] as const
 export const TIME_OPTIONS = ['20m', '30m', '45m', '60m', '90m', '120m+'] as const
@@ -112,6 +112,7 @@ export const TYPE_LABELS: Record<TypeKey, string> = {
   type2: 'Type 2 · Structure',
   type3: 'Type 3 · Experience / Plan',
   type4: 'Type 4 · Delayed-point',
+  type5: 'Type 5 · Career-summary / CV-style',
   unclassified: 'Unclassified / New Pattern',
 }
 
@@ -120,6 +121,7 @@ export const TYPE_HELP: Record<TypeKey, string> = {
   type2: '분량보다 단락 역할·배치가 주요 문제',
   type3: '과거 경험과 학업 계획의 분량 불균형',
   type4: '핵심 의미가 뒤늦게 등장하는 서사형 구조',
+  type5: '경력 전체를 업무 분야로 요약해 구체적 사례와 학업 동기가 드러나지 않음',
   unclassified: '기존 Type으로 충분히 설명되지 않는 문제',
 }
 
