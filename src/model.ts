@@ -44,7 +44,7 @@ export const BACKGROUND_OPTIONS = [
   'Corporate',
   'Fresh Graduate',
   'Public Sector',
-  'International Development',
+  'NGO',
   'Other',
 ] as const
 
