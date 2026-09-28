@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { BACKGROUND_OPTIONS, blankDraft, FIELD_OPTIONS, REWORK_KEYS, REVISION_KEYS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
-import { EMPTY_FILTERS, filterReviews, medianTime, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, typeCounts } from './analytics'
+import { BACKGROUND_OPTIONS, blankDraft, FIELD_OPTIONS, REWORK_KEYS, REWORK_LABELS, REVISION_KEYS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
+import { EMPTY_FILTERS, filterReviews, medianTime, reworkCounts, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, typeCounts } from './analytics'
 import { backupJson, exportCsv, parseBackup } from './storage'
 
 function completeDraft() {
@@ -12,30 +12,30 @@ function completeDraft() {
 
 describe('review entry', () => {
   it('keeps only distinct rework actions and orders revision areas as requested', () => {
-    expect(REWORK_KEYS).toEqual(['mergeParagraphs', 'moveContent', 'compressExperience', 'inferHiddenLogic'])
+    expect(REWORK_KEYS).toEqual(['mergeParagraphs', 'moveContent', 'compressExperience', 'inferHiddenLogic', 'developMissingExamples'])
+    expect(REWORK_LABELS.developMissingExamples).toBe('Develop Missing Examples')
     expect(REVISION_KEYS).toEqual(['revision_experience_closing', 'revision_academic_plan', 'revision_conclusion'])
   })
 
   it('keeps the current Field choices in one list, with separate problem fields', () => {
     expect(FIELD_OPTIONS).toEqual([
       'Business', 'STEM', 'Sport', 'Development Studies', 'International Relations',
-      'Education', 'Social Sciences', 'UCAS', 'Foundation', 'Other',
+      'Public Policy', 'Helping Professions', 'Social Sciences', 'UCAS', 'Foundation', 'Other',
     ])
   })
 
   it('keeps Background separate from Field and optional in new reviews', () => {
     expect(BACKGROUND_OPTIONS).toEqual([
-      'Public Sector / Civil Service', 'Corporate', 'NGO / International Development',
-      'Fresh Graduate', 'Other',
+      'Corporate', 'Fresh Graduate', 'Public Sector', 'International Development', 'Other',
     ])
     const draft = completeDraft()
     draft.field = 'Development Studies'
     expect(draft.background).toBe('')
     expect(validateDraft(draft)).toBeNull()
-    draft.background = 'Public Sector / Civil Service'
+    draft.background = 'Public Sector'
     const record = toRecord(draft)
-    expect([record.field, record.background]).toEqual(['Development Studies', 'Public Sector / Civil Service'])
-    expect(recordToDraft(record).background).toBe('Public Sector / Civil Service')
+    expect([record.field, record.background]).toEqual(['Development Studies', 'Public Sector'])
+    expect(recordToDraft(record).background).toBe('Public Sector')
   })
 
   it('starts with J’s chosen defaults but no structure scores', () => {
@@ -105,6 +105,22 @@ describe('analytics and backup', () => {
     expect(() => parseBackup({ ...backup, records: [good, { ...good, id: 'other', timeSpent: '61m' }] })).toThrow()
   })
 
+  it('saves and restores the new rework action without changing older records', () => {
+    const draft = completeDraft()
+    draft.rework = ['inferHiddenLogic', 'developMissingExamples']
+    const current = toRecord(draft)
+    const legacy = { ...toRecord(completeDraft()), id: 'legacy', rework: ['mergeParagraphs'] as const }
+    const restored = parseBackup({ schemaVersion: 1, exportedAt: new Date().toISOString(), records: [current, legacy] }).records
+    expect(restored.map(record => record.rework)).toEqual([['inferHiddenLogic', 'developMissingExamples'], ['mergeParagraphs']])
+    expect(recordToDraft(restored[0]).rework).toEqual(draft.rework)
+    expect(JSON.parse(backupJson(restored)).records[0].rework).toEqual(draft.rework)
+    expect(reworkCounts(restored).find(item => item.key === 'developMissingExamples')?.count).toBe(1)
+    const [headers, newRow, oldRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
+    const index = headers.indexOf('"developMissingExamples"')
+    expect(index).toBe(headers.indexOf('"rework_total"') - 1)
+    expect([newRow[index], oldRow[index]]).toEqual(['"1"', '"0"'])
+  })
+
   it('restores Type 5 while preserving old records and counts only matching filtered reviews', () => {
     const legacy = create('Legacy', 'English', '60m', 1)
     legacy.problemTypes = ['type3']
@@ -141,20 +157,20 @@ describe('analytics and backup', () => {
   it('restores legacy records without Background as blank and exports the new CSV column', () => {
     const record = create('Legacy', 'English', '60m', 1)
     const { background: _omitted, ...legacy } = record
-    const current = { ...create('Current', 'Korean', '30m', 1), background: 'NGO / International Development' as const, problemTypes: ['type5'] as const }
+    const current = { ...create('Current', 'Korean', '30m', 1), background: 'International Development' as const, problemTypes: ['type5'] as const }
     const exportedAt = new Date().toISOString()
     const restored = parseBackup({ schemaVersion: 1, exportedAt, records: [legacy, current] }).records
-    expect(restored.map(item => item.background)).toEqual(['', 'NGO / International Development'])
+    expect(restored.map(item => item.background)).toEqual(['', 'International Development'])
     expect(recordToDraft(restored[0]).background).toBe('')
     expect(JSON.parse(backupJson(restored)).records.map((item: { background: string }) => item.background))
-      .toEqual(['', 'NGO / International Development'])
+      .toEqual(['', 'International Development'])
     expect(filterReviews(restored, { ...EMPTY_FILTERS, background: '__missing' })).toEqual([restored[0]])
-    expect(filterReviews(restored, { ...EMPTY_FILTERS, background: 'NGO / International Development', type: 'type5' })).toEqual([restored[1]])
+    expect(filterReviews(restored, { ...EMPTY_FILTERS, background: 'International Development', type: 'type5' })).toEqual([restored[1]])
     expect(filterReviews(restored, { ...EMPTY_FILTERS, background: 'Corporate' })).toEqual([])
     const [headers, oldRow, currentRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
     const index = headers.indexOf('"background"')
     expect(index).toBe(headers.indexOf('"field"') + 1)
-    expect([oldRow[index], currentRow[index]]).toEqual(['""', '"NGO / International Development"'])
+    expect([oldRow[index], currentRow[index]]).toEqual(['""', '"International Development"'])
     expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...record, background: 'Academic / Research' }] })).toThrow()
     expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...record, background: null }] })).toThrow()
   })

@@ -5,11 +5,11 @@ test('chosen defaults and review save persist after reload', async ({ page }) =>
   await expect(page.locator('#field')).toHaveValue('')
   await expect(page.locator('#field option')).toHaveText([
     'Select a field', 'Business', 'STEM', 'Sport', 'Development Studies',
-    'International Relations', 'Education', 'Social Sciences', 'UCAS', 'Foundation', 'Other',
+    'International Relations', 'Public Policy', 'Helping Professions', 'Social Sciences', 'UCAS', 'Foundation', 'Other',
   ])
   await expect(page.locator('#background option')).toHaveText([
-    'Not specified', 'Public Sector / Civil Service', 'Corporate',
-    'NGO / International Development', 'Fresh Graduate', 'Other',
+    'Not specified', 'Corporate', 'Fresh Graduate', 'Public Sector',
+    'International Development', 'Other',
   ])
   await expect(page.locator('#background')).toHaveValue('')
   for (const [group, choice] of [
@@ -43,7 +43,7 @@ test('revision focus saves independently and appears in filtered dashboard stati
   await page.goto('./')
   const form = page.getByRole('region', { name: 'Review editor' })
   await expect(form.locator('.check-row span')).toHaveText([
-    'Merge Paragraphs', 'Move Content', 'Compress Experience', 'Infer Hidden Logic',
+    'Merge Paragraphs', 'Move Content', 'Compress Experience', 'Infer Hidden Logic', 'Develop Missing Examples',
   ])
   await expect(form.locator('.revision-table tbody th')).toHaveText([
     'Experience Closing', 'Academic Plan', 'Conclusion',
@@ -92,7 +92,7 @@ test('legacy localStorage reviews without revision fields load as None', async (
   await expect(page.locator('.storage-alert')).toHaveCount(0)
   await page.getByRole('button', { name: 'QA Old Review', exact: true }).click()
   await expect(page.locator('#background')).toHaveValue('')
-  await expect(page.locator('.footer-summary .summary-box.red')).toContainText('0 / 4')
+  await expect(page.locator('.footer-summary .summary-box.red')).toContainText('0 / 5')
   for (const area of ['Academic Plan', 'Conclusion', 'Experience Closing']) {
     await expect(page.getByRole('radio', { name: `${area}: none` })).toBeChecked()
   }
@@ -137,6 +137,21 @@ test('problem type rules block an empty new-pattern note', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'QA Pattern', exact: true })).toBeVisible()
 })
 
+test('missing-example rework saves, restores, and appears in dashboard trends', async ({ page }) => {
+  await page.goto('./')
+  await page.locator('#student-name').fill('QA Missing Examples')
+  for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '1' }).click()
+  await page.locator('.check-row').filter({ hasText: 'Develop Missing Examples' }).click()
+  await page.getByRole('button', { name: 'Save Review' }).click()
+  await expect(page.getByRole('row', { name: /QA Missing Examples/ })).toContainText('1 / 5')
+  await page.reload()
+  await page.getByRole('button', { name: 'QA Missing Examples', exact: true }).click()
+  await expect(page.locator('.check-row').filter({ hasText: 'Develop Missing Examples' }).locator('input')).toBeChecked()
+  await page.getByRole('tab', { name: 'Problem patterns' }).click()
+  const trends = page.locator('.analysis-card').filter({ hasText: 'Major Rework Trends' })
+  await expect(trends.locator('.progress-row').filter({ hasText: 'Develop Missing Examples' }).locator('strong')).toHaveText('1')
+})
+
 test('Type 5 shares the existing card flow and appears in filtered distribution after reload', async ({ page }) => {
   await page.goto('./')
   const form = page.getByRole('region', { name: 'Review editor' })
@@ -170,12 +185,12 @@ test('Background saves separately from Field and filters existing dashboard stat
   await page.goto('./')
   await page.locator('#student-name').fill('QA Public Sector')
   await page.locator('#field').selectOption('Development Studies')
-  await page.locator('#background').selectOption('Public Sector / Civil Service')
+  await page.locator('#background').selectOption('Public Sector')
   for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '1' }).click()
   await page.locator('.type-choice').filter({ hasText: 'Type 5' }).click()
   await page.getByRole('button', { name: 'Save Review' }).click()
   await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('sop-score-tracker:records:v1')!).records[0].background))
-    .toBe('Public Sector / Civil Service')
+    .toBe('Public Sector')
 
   await page.locator('#student-name').fill('QA No Background')
   for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '1' }).click()
@@ -183,7 +198,7 @@ test('Background saves separately from Field and filters existing dashboard stat
   await page.reload()
   await page.getByRole('button', { name: 'QA Public Sector', exact: true }).click()
   await expect(page.locator('#field')).toHaveValue('Development Studies')
-  await expect(page.locator('#background')).toHaveValue('Public Sector / Civil Service')
+  await expect(page.locator('#background')).toHaveValue('Public Sector')
   await page.locator('#background').selectOption('Corporate')
   await page.getByRole('button', { name: 'Update Review' }).click()
   await page.getByRole('tab', { name: 'Problem patterns' }).click()
@@ -191,8 +206,8 @@ test('Background saves separately from Field and filters existing dashboard stat
   await page.getByRole('button', { name: 'Filters' }).click()
   const backgroundFilter = page.locator('.filters-panel').getByRole('combobox', { name: 'Background' })
   await expect(backgroundFilter.locator('option')).toHaveText([
-    'All', 'Public Sector / Civil Service', 'Corporate', 'NGO / International Development',
-    'Fresh Graduate', 'Other', 'Not specified',
+    'All', 'Corporate', 'Fresh Graduate', 'Public Sector', 'International Development',
+    'Other', 'Not specified',
   ])
   await backgroundFilter.selectOption('Corporate')
   await expect(page.getByText('1 review in current filters')).toBeVisible()
