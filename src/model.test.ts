@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blankDraft, FIELD_OPTIONS, REWORK_KEYS, REVISION_KEYS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
+import { BACKGROUND_OPTIONS, blankDraft, FIELD_OPTIONS, REWORK_KEYS, REVISION_KEYS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
 import { EMPTY_FILTERS, filterReviews, medianTime, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, typeCounts } from './analytics'
 import { backupJson, exportCsv, parseBackup } from './storage'
 
@@ -21,6 +21,21 @@ describe('review entry', () => {
       'Business', 'STEM', 'Sport', 'Development Studies', 'International Relations',
       'Education', 'Social Sciences', 'UCAS', 'Foundation', 'Other',
     ])
+  })
+
+  it('keeps Background separate from Field and optional in new reviews', () => {
+    expect(BACKGROUND_OPTIONS).toEqual([
+      'Public Sector / Civil Service', 'Corporate', 'NGO / International Development',
+      'Fresh Graduate', 'Other',
+    ])
+    const draft = completeDraft()
+    draft.field = 'Development Studies'
+    expect(draft.background).toBe('')
+    expect(validateDraft(draft)).toBeNull()
+    draft.background = 'Public Sector / Civil Service'
+    const record = toRecord(draft)
+    expect([record.field, record.background]).toEqual(['Development Studies', 'Public Sector / Civil Service'])
+    expect(recordToDraft(record).background).toBe('Public Sector / Civil Service')
   })
 
   it('starts with J’s chosen defaults but no structure scores', () => {
@@ -121,6 +136,27 @@ describe('analytics and backup', () => {
     })
     expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...legacy, revision_conclusion: 'invalid' }] })).toThrow()
     expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...legacy, revision_conclusion: null }] })).toThrow()
+  })
+
+  it('restores legacy records without Background as blank and exports the new CSV column', () => {
+    const record = create('Legacy', 'English', '60m', 1)
+    const { background: _omitted, ...legacy } = record
+    const current = { ...create('Current', 'Korean', '30m', 1), background: 'NGO / International Development' as const, problemTypes: ['type5'] as const }
+    const exportedAt = new Date().toISOString()
+    const restored = parseBackup({ schemaVersion: 1, exportedAt, records: [legacy, current] }).records
+    expect(restored.map(item => item.background)).toEqual(['', 'NGO / International Development'])
+    expect(recordToDraft(restored[0]).background).toBe('')
+    expect(JSON.parse(backupJson(restored)).records.map((item: { background: string }) => item.background))
+      .toEqual(['', 'NGO / International Development'])
+    expect(filterReviews(restored, { ...EMPTY_FILTERS, background: '__missing' })).toEqual([restored[0]])
+    expect(filterReviews(restored, { ...EMPTY_FILTERS, background: 'NGO / International Development', type: 'type5' })).toEqual([restored[1]])
+    expect(filterReviews(restored, { ...EMPTY_FILTERS, background: 'Corporate' })).toEqual([])
+    const [headers, oldRow, currentRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
+    const index = headers.indexOf('"background"')
+    expect(index).toBe(headers.indexOf('"field"') + 1)
+    expect([oldRow[index], currentRow[index]]).toEqual(['""', '"NGO / International Development"'])
+    expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...record, background: 'Academic / Research' }] })).toThrow()
+    expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...record, background: null }] })).toThrow()
   })
 
   it('drops retired rework checks from old records while retaining the remaining actions', () => {

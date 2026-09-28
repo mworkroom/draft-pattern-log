@@ -1,7 +1,7 @@
 import { useRef, type ReactNode } from 'react'
 import { CircleHelp, RotateCcw } from 'lucide-react'
 import {
-  AI_USAGE, ENGLISH_QUALITY, FIELD_OPTIONS, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS,
+  AI_USAGE, BACKGROUND_OPTIONS, ENGLISH_QUALITY, FIELD_OPTIONS, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS,
   REVISION_HELP, REVISION_KEYS, REVISION_LABELS, REVISION_LEVELS,
   STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS, TIME_OPTIONS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS,
   structureTotal, type ReviewDraft, type ReviewRecordV1, type ReworkKey, type StructureKey, type TypeKey,
@@ -72,6 +72,10 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
         </select></div>
         <div className="field-block"><label>School Tier</label><Segmented options={TIERS} value={draft.schoolTier} label="School Tier" onChange={value => update('schoolTier', value)} /></div>
       </div>
+      <div className="form-grid"><div className="field-block"><label htmlFor="background">Background</label><select id="background" value={draft.background} onChange={event => update('background', event.target.value as ReviewDraft['background'])}>
+        <option value="">Not specified</option>
+        {BACKGROUND_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+      </select></div></div>
 
       <div className="form-grid three">
         <div className="field-block"><label htmlFor="word-limit">Word Limit</label><input id="word-limit" type="number" inputMode="numeric" min="0" max="100000" value={draft.wordLimit} onChange={event => update('wordLimit', event.target.value)} /></div>

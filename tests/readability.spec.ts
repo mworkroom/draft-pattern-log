@@ -23,6 +23,8 @@ for (const width of [1280, 2048]) {
     }
 
     await expect(page.getByRole('button', { name: 'Save Review' })).toBeInViewport()
+    expect(await page.locator('#background').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+    expect(await page.locator('#background').evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
     expect(await page.locator('.revision-table-wrap').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
     await page.getByRole('tab', { name: 'Problem patterns' }).click()
     const statsFontSize = await page.locator('.revision-stats-table td').first().evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))

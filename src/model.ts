@@ -38,6 +38,13 @@ export const FIELD_OPTIONS = [
   'Foundation',
   'Other',
 ] as const
+export const BACKGROUND_OPTIONS = [
+  'Public Sector / Civil Service',
+  'Corporate',
+  'NGO / International Development',
+  'Fresh Graduate',
+  'Other',
+] as const
 
 export type StructureKey = typeof STRUCTURE_KEYS[number]
 export type ReworkKey = typeof REWORK_KEYS[number]
@@ -50,6 +57,7 @@ export type Level = typeof LEVELS[number]
 export type Tier = typeof TIERS[number]
 export type AiUsage = typeof AI_USAGE[number]
 export type EnglishQuality = typeof ENGLISH_QUALITY[number]
+export type Background = typeof BACKGROUND_OPTIONS[number] | ''
 export type StructureScores = Record<StructureKey, 0 | 1 | 2 | null>
 
 export interface ReviewRecordV1 {
@@ -61,6 +69,7 @@ export interface ReviewRecordV1 {
   draftLanguage: Language
   level: Level | null
   field: string
+  background: Background
   schoolTier: Tier | null
   wordLimit: number | null
   draftLength: number | null
@@ -162,6 +171,7 @@ export function blankDraft(reviewDate = localToday()): ReviewDraft {
     draftLanguage: 'English',
     level: "Master's",
     field: '',
+    background: '',
     schoolTier: 'Mid',
     wordLimit: '500',
     draftLength: '',
@@ -214,6 +224,7 @@ export function toRecord(draft: ReviewDraft, original?: ReviewRecordV1): ReviewR
     draftLanguage: draft.draftLanguage,
     level: draft.level,
     field: draft.field.trim(),
+    background: draft.background,
     schoolTier: draft.schoolTier,
     wordLimit: draft.wordLimit === '' ? null : Number(draft.wordLimit),
     draftLength: draft.draftLength === '' ? null : Number(draft.draftLength),

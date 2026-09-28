@@ -9,7 +9,7 @@ import {
   typeCounts,
 } from './analytics'
 import {
-  LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS, REVISION_LABELS, REVISION_LEVELS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
+  BACKGROUND_OPTIONS, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS, REVISION_LABELS, REVISION_LEVELS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
   TYPE_KEYS, TYPE_LABELS, type ReviewRecordV1,
 } from './model'
 
@@ -90,6 +90,7 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
           <SelectFilter label="Language" value={filters.language} onChange={value => updateFilter('language', value)} options={LANGUAGES.map(value => ({ value, label: value }))} />
           <SelectFilter label="Level" value={filters.level} onChange={value => updateFilter('level', value)} options={[...LEVELS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} />
           <SelectFilter label="Field" value={filters.field} onChange={value => updateFilter('field', value)} options={[...fields.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} />
+          <SelectFilter label="Background" value={filters.background} onChange={value => updateFilter('background', value)} options={[...BACKGROUND_OPTIONS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} />
           <SelectFilter label="School Tier" value={filters.tier} onChange={value => updateFilter('tier', value)} options={[...TIERS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} />
           <SelectFilter label="Problem Type" value={filters.type} onChange={value => updateFilter('type', value)} options={TYPE_KEYS.map(value => ({ value, label: TYPE_LABELS[value] }))} />
         </div>
