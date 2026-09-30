@@ -21,11 +21,11 @@ interface Props {
   onDelete: (record: ReviewRecordV1) => void
 }
 
-function SelectFilter({ label, value, options, onChange }: {
-  label: string; value: string; options: { value: string; label: string }[]; onChange: (value: string) => void
+function SelectFilter({ label, value, options, onChange, allLabel = 'All' }: {
+  label: string; value: string; options: { value: string; label: string }[]; onChange: (value: string) => void; allLabel?: string
 }) {
   return <label className="filter-select"><span>{label}</span><select aria-label={label} value={value} onChange={event => onChange(event.target.value)}>
-    <option value="">All</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+    <option value="">{allLabel}</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
   </select></label>
 }
 
@@ -141,7 +141,12 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
         </div>
       </div> : null}
 
-      <div className="recent-head"><div><h3>Recent Reviews</h3><p>{filtered.length} {filtered.length === 1 ? 'review' : 'reviews'} in current filters</p></div><div className="recent-actions"><label className="table-search"><Search size={15}/><input aria-label="Search recent reviews" placeholder="Search name or field" value={search} onChange={event => setSearch(event.target.value)} /></label><button type="button" className="text-button" onClick={() => setShowAll(value => !value)}>{showAll ? 'Show fewer' : 'View all reviews'} <ArrowRight size={15}/></button></div></div>
+      <div className="recent-head"><div><h3>Recent Reviews</h3><p>{filtered.length} {filtered.length === 1 ? 'review' : 'reviews'} in current filters</p></div><button type="button" className="text-button" onClick={() => setShowAll(value => !value)}>{showAll ? 'Show fewer' : 'View all reviews'} <ArrowRight size={15}/></button></div>
+      <div className="recent-toolbar">
+        <SelectFilter label="Problem Type" allLabel="All types" value={filters.type} onChange={value => updateFilter('type', value)} options={TYPE_KEYS.map(value => ({ value, label: TYPE_LABELS[value] }))} />
+        <label className="table-search"><Search size={17}/><input aria-label="Search recent reviews" placeholder="Search name or field" value={search} onChange={event => setSearch(event.target.value)} /></label>
+      </div>
+      <p className="recent-filter-note">Problem Type filters both dashboard metrics and reviews. Showing {visibleRows.length} of {tableRows.length} matching reviews.</p>
       <div className="table-wrap"><table className="reviews-table"><thead><tr><th>Date</th><th>Student</th><th>Lang</th><th>Level</th><th>Field</th><th>Structure</th><th>Rework</th><th>Type</th><th>Time</th><th aria-label="Actions"/></tr></thead><tbody>
         {visibleRows.map(record => <tr key={record.id}><td>{record.reviewDate}</td><td><button className="student-link" type="button" onClick={() => onEdit(record)}>{record.studentName}</button></td><td><span className={'language-pill ' + (record.draftLanguage === 'Korean' ? 'korean' : 'english')}>{record.draftLanguage}</span></td><td>{record.level ?? '—'}</td><td>{record.field || '—'}</td><td>{STRUCTURE_KEYS.reduce((sum, key) => sum + record.structure[key], 0)} / 16</td><td>{record.rework.length} / {REWORK_KEYS.length}</td><td className="type-cell">{record.problemTypes.length ? record.problemTypes.map(key => key === 'unclassified' ? 'New' : key.replace('type', 'T')).join(', ') : '—'}</td><td>{record.timeSpent}</td><td><div className="row-actions"><button type="button" aria-label={'Edit ' + record.studentName} onClick={() => onEdit(record)}><Pencil size={14}/></button><button type="button" aria-label={'Delete ' + record.studentName} onClick={() => onDelete(record)}><Trash2 size={14}/></button></div></td></tr>)}
         {visibleRows.length === 0 ? <tr><td className="empty-table" colSpan={10}>{noData && records.length === 0 ? 'No reviews yet. Save the first review to start tracking.' : 'No reviews match the current filters or search.'}</td></tr> : null}

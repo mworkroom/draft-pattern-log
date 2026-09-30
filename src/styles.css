@@ -211,6 +211,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .progress-row { min-height: 30px; grid-template-columns: minmax(120px, 1.4fr) minmax(40px, 1fr) 30px; }
 .pattern-record { grid-template-columns: 145px minmax(0, 1fr) 16px; padding: 11px 2px; }
 .table-search input { font-size: 14px; width: 140px; }
+.recent-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; }
+.recent-toolbar .filter-select { flex: 2 1 320px; min-width: 0; font-size: 14px; }
+.recent-toolbar .filter-select select { height: 40px; }
+.recent-toolbar .table-search { flex: 1 1 200px; min-width: 0; height: 40px; padding: 7px 10px; }
+.recent-toolbar .table-search svg { flex: none; }
+.recent-toolbar .table-search input { width: 100%; min-width: 0; }
+.recent-filter-note { margin: 7px 0 10px; color: #60718e; font-size: 13px; line-height: 1.5; }
 .reviews-table { min-width: 960px; }
 .issue-strip strong { font-size: 14px; }
 .issue-strip small, .issue-tags span { font-size: 12px; }
