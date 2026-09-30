@@ -23,6 +23,10 @@ for (const width of [1280, 2048]) {
     }
 
     await expect(page.getByRole('button', { name: 'Save Review' })).toBeInViewport()
+    await page.locator('.type-choice').filter({ hasText: 'Type 6 — Genre Mismatch' }).click()
+    const subtypes = page.getByRole('group', { name: 'Type 6 subtypes' })
+    expect(await subtypes.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+    expect(await subtypes.locator('.type-choice strong').first().evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
     expect(await page.locator('#background').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
     expect(await page.locator('#background').evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
     expect(await page.locator('.revision-table-wrap').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)

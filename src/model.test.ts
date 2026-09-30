@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BACKGROUND_OPTIONS, blankDraft, FIELD_OPTIONS, REWORK_KEYS, REWORK_LABELS, REVISION_KEYS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
+import { BACKGROUND_OPTIONS, blankDraft, FIELD_OPTIONS, GENRE_MISMATCH_SUBTYPES, REWORK_KEYS, REWORK_LABELS, REVISION_KEYS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
 import { EMPTY_FILTERS, filterReviews, medianTime, reworkCounts, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, typeCounts } from './analytics'
 import { backupJson, exportCsv, parseBackup } from './storage'
 
@@ -26,7 +26,7 @@ describe('review entry', () => {
 
   it('keeps Background separate from Field and optional in new reviews', () => {
     expect(BACKGROUND_OPTIONS).toEqual([
-      'Corporate', 'Fresh Graduate', 'Public Sector', 'International Development', 'Other',
+      'Corporate', 'Fresh Graduate', 'Public Sector', 'NGO', 'Other',
     ])
     const draft = completeDraft()
     draft.field = 'Development Studies'
@@ -70,13 +70,36 @@ describe('review entry', () => {
   })
 
   it('saves Type 5 alongside existing types in the requested order', () => {
-    expect(TYPE_KEYS).toEqual(['type1', 'type2', 'type3', 'type4', 'type5', 'unclassified'])
+    expect(TYPE_KEYS).toEqual(['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'unclassified'])
     expect(TYPE_LABELS.type5).toBe('Type 5 · Career-summary / CV-style')
     expect(TYPE_HELP.type5).toBe('경력 전체를 업무 분야로 요약해 구체적 사례와 학업 동기가 드러나지 않음')
     const draft = completeDraft()
     draft.problemTypes = ['type1', 'type3', 'type4', 'type5']
     expect(validateDraft(draft)).toBeNull()
     expect(recordToDraft(toRecord(draft)).problemTypes).toEqual(draft.problemTypes)
+  })
+
+  it('keeps Type 6 separate from structure scores and other problem types', () => {
+    expect(GENRE_MISMATCH_SUBTYPES).toEqual(['researchProposal', 'promptResponse'])
+    const lowScore = completeDraft()
+    for (const key of Object.keys(lowScore.structure) as (keyof typeof lowScore.structure)[]) lowScore.structure[key] = 0
+    expect(toRecord(lowScore).problemTypes).toEqual([])
+
+    const draft = completeDraft()
+    draft.problemTypes = ['type1', 'type3', 'type6']
+    expect(validateDraft(draft)).toMatch(/Type 6/)
+    draft.genreMismatchSubtypes = ['researchProposal', 'promptResponse']
+    expect(validateDraft(draft)).toBeNull()
+    draft.genreMismatchSubtypes = ['researchProposal']
+    expect(validateDraft(draft)).toBeNull()
+    draft.genreMismatchSubtypes = ['promptResponse']
+    expect(validateDraft(draft)).toBeNull()
+    draft.genreMismatchSubtypes = ['researchProposal', 'promptResponse']
+    const record = toRecord(draft)
+    expect(record.problemTypes).toEqual(['type1', 'type3', 'type6'])
+    expect(record.genreMismatchSubtypes).toEqual(GENRE_MISMATCH_SUBTYPES)
+    expect(record.rework).toEqual([])
+    expect(recordToDraft(record).genreMismatchSubtypes).toEqual(GENRE_MISMATCH_SUBTYPES)
   })
 })
 
@@ -131,13 +154,38 @@ describe('analytics and backup', () => {
     expect(JSON.parse(backupJson(restored)).records[1].problemTypes).toEqual(['type3', 'type5'])
     expect(filterReviews(restored, { ...EMPTY_FILTERS, type: 'type5' }).map(record => record.studentName)).toEqual(['Career Summary'])
     expect(typeCounts(restored).map(({ key, count }) => [key, count])).toEqual([
-      ['type1', 0], ['type2', 0], ['type3', 2], ['type4', 0], ['type5', 1], ['unclassified', 0],
+      ['type1', 0], ['type2', 0], ['type3', 2], ['type4', 0], ['type5', 1], ['type6', 0], ['unclassified', 0],
     ])
     expect(typeCounts(filterReviews(restored, { ...EMPTY_FILTERS, language: 'English' })).find(item => item.key === 'type5')?.count).toBe(0)
     const [headers, oldRow, currentRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
     const type5Index = headers.indexOf('"type5"')
-    expect(type5Index).toBe(headers.indexOf('"unclassified"') - 1)
+    expect(type5Index).toBe(headers.indexOf('"type6"') - 1)
     expect([oldRow[type5Index], currentRow[type5Index]]).toEqual(['"0"', '"1"'])
+  })
+
+  it('restores Type 6 subtypes and keeps older backups without the subtype field valid', () => {
+    const legacyRecord = create('Legacy', 'English', '60m', 1)
+    const { genreMismatchSubtypes: _omitted, ...legacy } = legacyRecord
+    const draft = completeDraft()
+    draft.studentName = 'Genre Mismatch'
+    draft.problemTypes = ['type2', 'type6']
+    draft.genreMismatchSubtypes = ['promptResponse']
+    const current = toRecord(draft)
+    const exportedAt = new Date().toISOString()
+    const restored = parseBackup({ schemaVersion: 1, exportedAt, records: [legacy, current] }).records
+    expect(restored.map(record => record.genreMismatchSubtypes)).toEqual([[], ['promptResponse']])
+    expect(JSON.parse(backupJson(restored)).records[1].genreMismatchSubtypes).toEqual(['promptResponse'])
+    expect(filterReviews(restored, { ...EMPTY_FILTERS, type: 'type6' })).toEqual([restored[1]])
+    expect(typeCounts(restored).find(item => item.key === 'type6')?.count).toBe(1)
+    const [headers, oldRow, newRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
+    const type6Index = headers.indexOf('"type6"')
+    const proposalIndex = headers.indexOf('"researchProposal"')
+    const promptIndex = headers.indexOf('"promptResponse"')
+    expect([proposalIndex, promptIndex]).toEqual([headers.indexOf('"unclassified"') + 1, headers.indexOf('"unclassified"') + 2])
+    expect([oldRow[type6Index], oldRow[proposalIndex], oldRow[promptIndex]]).toEqual(['"0"', '"0"', '"0"'])
+    expect([newRow[type6Index], newRow[proposalIndex], newRow[promptIndex]]).toEqual(['"1"', '"0"', '"1"'])
+    expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...current, genreMismatchSubtypes: [] }] })).toThrow()
+    expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...current, genreMismatchSubtypes: ['unknown'] }] })).toThrow()
   })
 
   it('normalizes only missing revision fields in legacy JSON backups', () => {
@@ -157,20 +205,20 @@ describe('analytics and backup', () => {
   it('restores legacy records without Background as blank and exports the new CSV column', () => {
     const record = create('Legacy', 'English', '60m', 1)
     const { background: _omitted, ...legacy } = record
-    const current = { ...create('Current', 'Korean', '30m', 1), background: 'International Development' as const, problemTypes: ['type5'] as const }
+    const current = { ...create('Current', 'Korean', '30m', 1), background: 'NGO' as const, problemTypes: ['type5'] as const }
     const exportedAt = new Date().toISOString()
     const restored = parseBackup({ schemaVersion: 1, exportedAt, records: [legacy, current] }).records
-    expect(restored.map(item => item.background)).toEqual(['', 'International Development'])
+    expect(restored.map(item => item.background)).toEqual(['', 'NGO'])
     expect(recordToDraft(restored[0]).background).toBe('')
     expect(JSON.parse(backupJson(restored)).records.map((item: { background: string }) => item.background))
-      .toEqual(['', 'International Development'])
+      .toEqual(['', 'NGO'])
     expect(filterReviews(restored, { ...EMPTY_FILTERS, background: '__missing' })).toEqual([restored[0]])
-    expect(filterReviews(restored, { ...EMPTY_FILTERS, background: 'International Development', type: 'type5' })).toEqual([restored[1]])
+    expect(filterReviews(restored, { ...EMPTY_FILTERS, background: 'NGO', type: 'type5' })).toEqual([restored[1]])
     expect(filterReviews(restored, { ...EMPTY_FILTERS, background: 'Corporate' })).toEqual([])
     const [headers, oldRow, currentRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
     const index = headers.indexOf('"background"')
     expect(index).toBe(headers.indexOf('"field"') + 1)
-    expect([oldRow[index], currentRow[index]]).toEqual(['""', '"International Development"'])
+    expect([oldRow[index], currentRow[index]]).toEqual(['""', '"NGO"'])
     expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...record, background: 'Academic / Research' }] })).toThrow()
     expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...record, background: null }] })).toThrow()
   })

@@ -9,7 +9,7 @@ test('chosen defaults and review save persist after reload', async ({ page }) =>
   ])
   await expect(page.locator('#background option')).toHaveText([
     'Not specified', 'Corporate', 'Fresh Graduate', 'Public Sector',
-    'International Development', 'Other',
+    'NGO', 'Other',
   ])
   await expect(page.locator('#background')).toHaveValue('')
   for (const [group, choice] of [
@@ -157,7 +157,7 @@ test('Type 5 shares the existing card flow and appears in filtered distribution 
   const form = page.getByRole('region', { name: 'Review editor' })
   await expect(form.locator('.type-choice strong')).toHaveText([
     'Type 1 · Length + Structure', 'Type 2 · Structure', 'Type 3 · Experience / Plan',
-    'Type 4 · Delayed-point', 'Type 5 · Career-summary / CV-style', 'Unclassified / New Pattern',
+    'Type 4 · Delayed-point', 'Type 5 · Career-summary / CV-style', 'Type 6 — Genre Mismatch', 'Unclassified / New Pattern',
   ])
   const careerType = form.locator('.type-choice').filter({ hasText: 'Type 5 · Career-summary / CV-style' })
   await expect(careerType.locator('small')).toHaveText('경력 전체를 업무 분야로 요약해 구체적 사례와 학업 동기가 드러나지 않음')
@@ -179,6 +179,38 @@ test('Type 5 shares the existing card flow and appears in filtered distribution 
   await page.getByRole('button', { name: 'QA Career Summary', exact: true }).click()
   await expect(form.locator('.type-choice').filter({ hasText: 'Type 3' }).locator('input')).toBeChecked()
   await expect(careerType.locator('input')).toBeChecked()
+})
+
+test('Type 6 requires a selected genre, coexists with Type 2, and restores both subtypes', async ({ page }) => {
+  await page.goto('./')
+  const form = page.getByRole('region', { name: 'Review editor' })
+  await page.locator('#student-name').fill('QA Genre Mismatch')
+  for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '2' }).click()
+  await form.locator('.type-choice').filter({ hasText: 'Type 2 · Structure' }).click()
+  const type6 = form.locator('.type-choice').filter({ hasText: 'Type 6 — Genre Mismatch' })
+  await type6.click()
+  await page.getByRole('button', { name: 'Save Review' }).click()
+  await expect(page.getByRole('alert')).toContainText('Type 6')
+  const subtypes = form.getByRole('group', { name: 'Type 6 subtypes' })
+  await expect(subtypes.locator('.type-choice strong')).toHaveText(['Research Proposal Style', 'Prompt-Response / Q&A Style'])
+  await subtypes.locator('.type-choice').filter({ hasText: 'Research Proposal Style' }).click()
+  await subtypes.locator('.type-choice').filter({ hasText: 'Prompt-Response / Q&A Style' }).click()
+  await expect(subtypes.locator('input:checked')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Save Review' }).click()
+  await expect(page.getByRole('row', { name: /QA Genre Mismatch/ })).toContainText('T2, T6')
+  await page.reload()
+  await page.getByRole('tab', { name: 'Problem patterns' }).click()
+  const distribution = page.locator('.analysis-card').filter({ hasText: 'Problem Type Distribution' })
+  await expect(distribution.locator('.progress-row').filter({ hasText: 'Type 6 — Genre Mismatch' }).locator('strong')).toHaveText('1')
+  await page.getByRole('button', { name: 'Filters' }).click()
+  await page.locator('.filters-panel').getByRole('combobox', { name: 'Problem Type' }).selectOption('type6')
+  await expect(page.getByText('1 review in current filters')).toBeVisible()
+  await page.getByRole('button', { name: 'QA Genre Mismatch', exact: true }).click()
+  await expect(subtypes.locator('input:checked')).toHaveCount(2)
+  await type6.click()
+  await expect(subtypes).toHaveCount(0)
+  await page.getByRole('button', { name: 'Update Review' }).click()
+  await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('sop-score-tracker:records:v1')!).records[0].genreMismatchSubtypes)).toEqual([])
 })
 
 test('Background saves separately from Field and filters existing dashboard statistics', async ({ page }) => {
@@ -206,7 +238,7 @@ test('Background saves separately from Field and filters existing dashboard stat
   await page.getByRole('button', { name: 'Filters' }).click()
   const backgroundFilter = page.locator('.filters-panel').getByRole('combobox', { name: 'Background' })
   await expect(backgroundFilter.locator('option')).toHaveText([
-    'All', 'Corporate', 'Fresh Graduate', 'Public Sector', 'International Development',
+    'All', 'Corporate', 'Fresh Graduate', 'Public Sector', 'NGO',
     'Other', 'Not specified',
   ])
   await backgroundFilter.selectOption('Corporate')

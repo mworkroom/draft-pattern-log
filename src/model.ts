@@ -17,7 +17,8 @@ export const REWORK_KEYS = [
   'developMissingExamples',
 ] as const
 
-export const TYPE_KEYS = ['type1', 'type2', 'type3', 'type4', 'type5', 'unclassified'] as const
+export const TYPE_KEYS = ['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'unclassified'] as const
+export const GENRE_MISMATCH_SUBTYPES = ['researchProposal', 'promptResponse'] as const
 export const REVISION_KEYS = ['revision_experience_closing', 'revision_academic_plan', 'revision_conclusion'] as const
 export const REVISION_LEVELS = ['none', 'refine', 'rebuild'] as const
 export const TIME_OPTIONS = ['20m', '30m', '45m', '60m', '90m', '120m+'] as const
@@ -51,6 +52,7 @@ export const BACKGROUND_OPTIONS = [
 export type StructureKey = typeof STRUCTURE_KEYS[number]
 export type ReworkKey = typeof REWORK_KEYS[number]
 export type TypeKey = typeof TYPE_KEYS[number]
+export type GenreMismatchSubtype = typeof GENRE_MISMATCH_SUBTYPES[number]
 export type RevisionKey = typeof REVISION_KEYS[number]
 export type RevisionLevel = typeof REVISION_LEVELS[number]
 export type TimeOption = typeof TIME_OPTIONS[number]
@@ -79,6 +81,7 @@ export interface ReviewRecordV1 {
   structure: Record<StructureKey, 0 | 1 | 2>
   rework: ReworkKey[]
   problemTypes: TypeKey[]
+  genreMismatchSubtypes: GenreMismatchSubtype[]
   unclassifiedNote: string
   revision_academic_plan: RevisionLevel
   revision_conclusion: RevisionLevel
@@ -125,6 +128,7 @@ export const TYPE_LABELS: Record<TypeKey, string> = {
   type3: 'Type 3 · Experience / Plan',
   type4: 'Type 4 · Delayed-point',
   type5: 'Type 5 · Career-summary / CV-style',
+  type6: 'Type 6 — Genre Mismatch',
   unclassified: 'Unclassified / New Pattern',
 }
 
@@ -134,7 +138,18 @@ export const TYPE_HELP: Record<TypeKey, string> = {
   type3: '과거 경험과 학업 계획의 분량 불균형',
   type4: '핵심 의미가 뒤늦게 등장하는 서사형 구조',
   type5: '경력 전체를 업무 분야로 요약해 구체적 사례와 학업 동기가 드러나지 않음',
+  type6: 'SOP 대신 연구계획서 또는 문항별 답변지 형식으로 작성됨',
   unclassified: '기존 Type으로 충분히 설명되지 않는 문제',
+}
+
+export const GENRE_MISMATCH_LABELS: Record<GenreMismatchSubtype, string> = {
+  researchProposal: 'Research Proposal Style',
+  promptResponse: 'Prompt-Response / Q&A Style',
+}
+
+export const GENRE_MISMATCH_HELP: Record<GenreMismatchSubtype, string> = {
+  researchProposal: '연구 질문·방법론·이론 또는 연구 설계가 중심이 되어 동기·경험·지원 과정과의 연결이 밀려남',
+  promptResponse: '지원 안내 문항을 순서대로 답해 소제목과 내용이 반복되고 하나의 SOP 서사로 이어지지 않음',
 }
 
 export const REVISION_LABELS: Record<RevisionKey, string> = {
@@ -182,6 +197,7 @@ export function blankDraft(reviewDate = localToday()): ReviewDraft {
     structure: Object.fromEntries(STRUCTURE_KEYS.map(key => [key, null])) as StructureScores,
     rework: [],
     problemTypes: [],
+    genreMismatchSubtypes: [],
     unclassifiedNote: '',
     revision_academic_plan: 'none',
     revision_conclusion: 'none',
@@ -208,6 +224,7 @@ export function validateDraft(draft: ReviewDraft): string | null {
   if (!draft.studentName.trim()) return 'Student Name을 입력해 주세요.'
   if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.reviewDate) || Number.isNaN(Date.parse(draft.reviewDate))) return '유효한 Review Date를 선택해 주세요.'
   if (!STRUCTURE_KEYS.every(key => draft.structure[key] !== null)) return 'Structure Score 8개를 모두 선택해 주세요.'
+  if (draft.problemTypes.includes('type6') && !draft.genreMismatchSubtypes.length) return 'Type 6의 하위 유형을 하나 이상 선택해 주세요.'
   if (draft.problemTypes.includes('unclassified') && !draft.unclassifiedNote.trim()) return 'Unclassified의 새 패턴 메모를 입력해 주세요.'
   if (!REVISION_KEYS.every(key => REVISION_LEVELS.includes(draft[key]))) return 'Revision Focus 값을 확인해 주세요.'
   for (const value of [draft.wordLimit, draft.draftLength]) {
@@ -235,6 +252,7 @@ export function toRecord(draft: ReviewDraft, original?: ReviewRecordV1): ReviewR
     structure: draft.structure as ReviewRecordV1['structure'],
     rework: [...draft.rework],
     problemTypes: [...draft.problemTypes],
+    genreMismatchSubtypes: draft.problemTypes.includes('type6') ? [...draft.genreMismatchSubtypes] : [],
     unclassifiedNote: draft.problemTypes.includes('unclassified') ? draft.unclassifiedNote.trim() : '',
     revision_academic_plan: draft.revision_academic_plan,
     revision_conclusion: draft.revision_conclusion,

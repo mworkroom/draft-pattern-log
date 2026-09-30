@@ -93,6 +93,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .type-choice { display: flex; gap: 8px; align-items: flex-start; border: 1px solid #dce5f1; border-radius: 6px; padding: 8px 9px; cursor: pointer; min-width: 0; }
 .type-choice.checked { background: #f1f7ff; border-color: #9cc1f0; }
 .type-choice span { min-width: 0; display: flex; flex-direction: column; gap: 3px; }.type-choice strong { font-size: 11px; font-weight: 600; color: #273a57; }.type-choice small { font-size: 9.5px; color: #72819a; line-height: 1.25; }
+.genre-subtypes { margin-top: 10px; }
+.genre-subtypes h4 { margin: 0; font-size: 14px; color: #273a57; }
+.genre-subtypes .type-grid { margin-top: 6px; }
 .pattern-note { margin-top: 8px; }
 .disabled-field { display: flex; align-items: center; min-height: 31px; color: #8795a9; border: 1px dashed #d3dfed; background: #f7f9fc; border-radius: 5px; padding: 0 10px; font-size: 11px; }
 .notes-date { grid-template-columns: 155px minmax(0, 1fr) !important; align-items: start; padding-bottom: 5px; }

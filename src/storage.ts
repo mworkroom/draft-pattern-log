@@ -1,5 +1,5 @@
 import {
-  AI_USAGE, BACKGROUND_OPTIONS, ENGLISH_QUALITY, LANGUAGES, LEVELS, REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS,
+  AI_USAGE, BACKGROUND_OPTIONS, ENGLISH_QUALITY, GENRE_MISMATCH_SUBTYPES, LANGUAGES, LEVELS, REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS,
   STRUCTURE_KEYS, TIERS, TIME_OPTIONS, TYPE_KEYS,
   type BackupV1, type ReviewRecordV1,
 } from './model'
@@ -35,6 +35,8 @@ export function isReviewRecord(value: unknown): value is ReviewRecordV1 {
     isKeyArray(value.rework, REWORK_KEYS) &&
     isKeyArray(value.problemTypes, TYPE_KEYS) &&
     !(value.problemTypes.includes('type1') && value.problemTypes.includes('type2')) &&
+    isKeyArray(value.genreMismatchSubtypes, GENRE_MISMATCH_SUBTYPES) &&
+    (value.problemTypes.includes('type6') ? value.genreMismatchSubtypes.length > 0 : value.genreMismatchSubtypes.length === 0) &&
     typeof value.unclassifiedNote === 'string' &&
     (!value.problemTypes.includes('unclassified') || value.unclassifiedNote.trim().length > 0) &&
     REVISION_KEYS.every(key => isOption(value[key], REVISION_LEVELS)) &&
@@ -48,16 +50,18 @@ function normalizeRecord(value: unknown): unknown {
   if (!isObject(value)) return value
   const missing = REVISION_KEYS.filter(key => !Object.hasOwn(value, key))
   const missingBackground = !Object.hasOwn(value, 'background')
+  const missingGenreSubtypes = !Object.hasOwn(value, 'genreMismatchSubtypes')
   const originalRework = value.rework
   const rework = Array.isArray(originalRework)
     ? originalRework.filter(item => typeof item !== 'string' || !RETIRED_REWORK_KEYS.has(item))
     : null
   const removedRework = Array.isArray(originalRework) && rework !== null && rework.length !== originalRework.length
-  if (!missing.length && !removedRework && !missingBackground) return value
+  if (!missing.length && !removedRework && !missingBackground && !missingGenreSubtypes) return value
   return {
     ...value,
     ...(removedRework ? { rework } : {}),
     ...(missingBackground ? { background: '' } : {}),
+    ...(missingGenreSubtypes ? { genreMismatchSubtypes: [] } : {}),
     ...Object.fromEntries(missing.map(key => [key, 'none'])),
   }
 }
@@ -119,7 +123,7 @@ export function exportCsv(records: ReviewRecordV1[]): string {
     'id', 'review_date', 'created_at', 'updated_at', 'student_name', 'draft_language', 'level', 'field', 'background',
     'school_tier', 'word_limit', 'draft_length', 'ai_usage',
     ...STRUCTURE_KEYS, 'structure_total', ...REWORK_KEYS, 'rework_total',
-    ...TYPE_KEYS, 'unclassified_note', ...REVISION_KEYS, 'time_spent', 'surface_english_quality', 'notes',
+    ...TYPE_KEYS, ...GENRE_MISMATCH_SUBTYPES, 'unclassified_note', ...REVISION_KEYS, 'time_spent', 'surface_english_quality', 'notes',
   ]
   const rows = records.map(record => [
     record.id, record.reviewDate, record.createdAt, record.updatedAt, record.studentName,
@@ -130,6 +134,7 @@ export function exportCsv(records: ReviewRecordV1[]): string {
     ...REWORK_KEYS.map(key => record.rework.includes(key) ? 1 : 0),
     record.rework.length,
     ...TYPE_KEYS.map(key => record.problemTypes.includes(key) ? 1 : 0),
+    ...GENRE_MISMATCH_SUBTYPES.map(key => record.genreMismatchSubtypes.includes(key) ? 1 : 0),
     record.unclassifiedNote, ...REVISION_KEYS.map(key => record[key]),
     record.timeSpent, record.surfaceEnglishQuality, record.notes,
   ])
