@@ -17,7 +17,7 @@ export const REWORK_KEYS = [
   'developMissingExamples',
 ] as const
 
-export const TYPE_KEYS = ['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'unclassified'] as const
+export const TYPE_KEYS = ['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'type7', 'unclassified'] as const
 export const GENRE_MISMATCH_SUBTYPES = ['researchProposal', 'promptResponse'] as const
 export const REVISION_KEYS = ['revision_experience_closing', 'revision_academic_plan', 'revision_conclusion'] as const
 export const REVISION_LEVELS = ['none', 'refine', 'rebuild'] as const
@@ -109,7 +109,7 @@ export const STRUCTURE_LABELS: Record<StructureKey, { label: string; help: strin
   experienceSelection: { label: 'Experience Selection', help: '필요한 경험을 선별하고 불필요한 나열을 줄였나요?' },
   logicConnection: { label: 'Logic Connection', help: '경험과 의미, 지원 동기 사이의 논리가 글에 드러나나요?' },
   academicPlan: { label: 'Academic Plan Exists', help: '지원 과정에서 공부할 내용이 별도로 있나요?' },
-  moduleConnection: { label: 'Module Connection', help: '모듈·연구·프로젝트가 경험 또는 목표와 연결되나요?' },
+  moduleConnection: { label: 'Module Connection', help: '모듈,연구,프로젝트가 경험 또는 목표와 연결되나요?' },
   shortTermPlan: { label: 'Short-term Plan', help: '졸업 직후 약 1–3년의 방향이 구체적인가요?' },
   readerContext: { label: 'Reader Context', help: '외부 심사위원이 배경과 중간 논리를 이해할 수 있나요?' },
 }
@@ -123,22 +123,24 @@ export const REWORK_LABELS: Record<ReworkKey, string> = {
 }
 
 export const TYPE_LABELS: Record<TypeKey, string> = {
-  type1: 'Type 1 · Length + Structure',
-  type2: 'Type 2 · Structure',
-  type3: 'Type 3 · Experience / Plan',
-  type4: 'Type 4 · Delayed-point',
-  type5: 'Type 5 · Career-summary / CV-style',
+  type1: 'Type 1 — Length + Structure',
+  type2: 'Type 2 — Structure',
+  type3: 'Type 3 — Experience / Plan',
+  type4: 'Type 4 — Delayed-point',
+  type5: 'Type 5 — Career-summary / CV-style',
   type6: 'Type 6 — Genre Mismatch',
+  type7: 'Type 7 · Weak English Writing',
   unclassified: 'Unclassified / New Pattern',
 }
 
 export const TYPE_HELP: Record<TypeKey, string> = {
   type1: '분량 초과와 구조 문제가 함께 발생',
-  type2: '분량보다 단락 역할·배치가 주요 문제',
+  type2: '분량보다 단락 역할, 배치가 주요 문제',
   type3: '과거 경험과 학업 계획의 분량 불균형',
   type4: '핵심 의미가 뒤늦게 등장하는 서사형 구조',
-  type5: '경력 전체를 업무 분야로 요약해 구체적 사례와 학업 동기가 드러나지 않음',
-  type6: 'SOP 대신 연구계획서 또는 문항별 답변지 형식으로 작성됨',
+  type5: '경력 전체를 CV처럼 요약해 구체적 사례와 학업 동기가 드러나지 않음',
+  type6: '연구계획서 또는 문항별 답변지 형식으로 작성됨',
+  type7: '영어 표현력이 부족한 상태에서 직접 영작하거나 AI/번역 결과를 수정하여 문법, 표현, 의미 전달이 크게 저하된 경우',
   unclassified: '기존 Type으로 충분히 설명되지 않는 문제',
 }
 
@@ -148,7 +150,7 @@ export const GENRE_MISMATCH_LABELS: Record<GenreMismatchSubtype, string> = {
 }
 
 export const GENRE_MISMATCH_HELP: Record<GenreMismatchSubtype, string> = {
-  researchProposal: '연구 질문·방법론·이론 또는 연구 설계가 중심이 되어 동기·경험·지원 과정과의 연결이 밀려남',
+  researchProposal: '연구 질문, 방법론, 이론 또는 연구 설계가 중심이 되어 동기, 경험, 지원 과정과의 연결이 밀려남',
   promptResponse: '지원 안내 문항을 순서대로 답해 소제목과 내용이 반복되고 하나의 SOP 서사로 이어지지 않음',
 }
 

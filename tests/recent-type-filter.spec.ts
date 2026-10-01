@@ -30,7 +30,7 @@ for (const width of [1280, 2048]) {
     const total = page.locator('.kpi-card').filter({ hasText: 'Total Reviews' }).locator('strong')
     await expect(typeFilter.locator('option')).toHaveText(['All types', ...TYPE_KEYS.map(key => TYPE_LABELS[key])])
     await expect(names).toHaveCount(5)
-    await expect(total).toHaveText('9')
+    await expect(total).toHaveText(String(records.length))
 
     // Every type filters the full data set before the five-row preview is applied.
     for (const key of TYPE_KEYS) {
@@ -65,10 +65,10 @@ for (const width of [1280, 2048]) {
     await page.getByRole('button', { name: 'Clear all' }).click()
     await expect(typeFilter).toHaveValue('')
     await expect(globalType).toHaveValue('')
-    await expect(total).toHaveText('9')
+    await expect(total).toHaveText(String(records.length))
     await page.getByRole('button', { name: /^Filters/ }).click()
     await page.getByRole('button', { name: 'View all reviews' }).click()
-    await expect(names).toHaveCount(9)
+    await expect(names).toHaveCount(records.length)
     await page.getByRole('button', { name: 'Show fewer' }).click()
     await expect(names).toHaveCount(5)
 

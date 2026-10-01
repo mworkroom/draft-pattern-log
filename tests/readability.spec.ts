@@ -23,6 +23,9 @@ for (const width of [1280, 2048]) {
     }
 
     await expect(page.getByRole('button', { name: 'Save Review' })).toBeInViewport()
+    const type7 = page.locator('.type-choice').filter({ hasText: 'Type 7 · Weak English Writing' })
+    expect(await type7.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+    expect(await type7.locator('strong').evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
     await page.locator('.type-choice').filter({ hasText: 'Type 6 — Genre Mismatch' }).click()
     const subtypes = page.getByRole('group', { name: 'Type 6 subtypes' })
     expect(await subtypes.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)

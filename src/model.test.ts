@@ -70,9 +70,9 @@ describe('review entry', () => {
   })
 
   it('saves Type 5 alongside existing types in the requested order', () => {
-    expect(TYPE_KEYS).toEqual(['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'unclassified'])
-    expect(TYPE_LABELS.type5).toBe('Type 5 · Career-summary / CV-style')
-    expect(TYPE_HELP.type5).toBe('경력 전체를 업무 분야로 요약해 구체적 사례와 학업 동기가 드러나지 않음')
+    expect(TYPE_KEYS).toEqual(['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'type7', 'unclassified'])
+    expect(TYPE_LABELS.type5).toBe('Type 5 — Career-summary / CV-style')
+    expect(TYPE_HELP.type5).toBe('경력 전체를 CV처럼 요약해 구체적 사례와 학업 동기가 드러나지 않음')
     const draft = completeDraft()
     draft.problemTypes = ['type1', 'type3', 'type4', 'type5']
     expect(validateDraft(draft)).toBeNull()
@@ -100,6 +100,18 @@ describe('review entry', () => {
     expect(record.genreMismatchSubtypes).toEqual(GENRE_MISMATCH_SUBTYPES)
     expect(record.rework).toEqual([])
     expect(recordToDraft(record).genreMismatchSubtypes).toEqual(GENRE_MISMATCH_SUBTYPES)
+  })
+
+  it('saves Type 7 alongside other types without a subtype or structure-score rule', () => {
+    expect(TYPE_LABELS.type7).toBe('Type 7 · Weak English Writing')
+    expect(TYPE_HELP.type7).toBe('영어 표현력이 부족한 상태에서 직접 영작하거나 AI/번역 결과를 수정하여 문법, 표현, 의미 전달이 크게 저하된 경우')
+    const draft = completeDraft()
+    draft.problemTypes = ['type1', 'type3', 'type7']
+    expect(validateDraft(draft)).toBeNull()
+    const record = toRecord(draft)
+    expect(record.problemTypes).toEqual(['type1', 'type3', 'type7'])
+    expect(record.genreMismatchSubtypes).toEqual([])
+    expect(recordToDraft(record).problemTypes).toEqual(draft.problemTypes)
   })
 })
 
@@ -154,7 +166,7 @@ describe('analytics and backup', () => {
     expect(JSON.parse(backupJson(restored)).records[1].problemTypes).toEqual(['type3', 'type5'])
     expect(filterReviews(restored, { ...EMPTY_FILTERS, type: 'type5' }).map(record => record.studentName)).toEqual(['Career Summary'])
     expect(typeCounts(restored).map(({ key, count }) => [key, count])).toEqual([
-      ['type1', 0], ['type2', 0], ['type3', 2], ['type4', 0], ['type5', 1], ['type6', 0], ['unclassified', 0],
+      ['type1', 0], ['type2', 0], ['type3', 2], ['type4', 0], ['type5', 1], ['type6', 0], ['type7', 0], ['unclassified', 0],
     ])
     expect(typeCounts(filterReviews(restored, { ...EMPTY_FILTERS, language: 'English' })).find(item => item.key === 'type5')?.count).toBe(0)
     const [headers, oldRow, currentRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
@@ -186,6 +198,22 @@ describe('analytics and backup', () => {
     expect([newRow[type6Index], newRow[proposalIndex], newRow[promptIndex]]).toEqual(['"1"', '"0"', '"1"'])
     expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...current, genreMismatchSubtypes: [] }] })).toThrow()
     expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...current, genreMismatchSubtypes: ['unknown'] }] })).toThrow()
+  })
+
+  it('restores, filters, counts, and exports Type 7 without changing older records', () => {
+    const legacy = create('Legacy', 'English', '60m', 1)
+    legacy.problemTypes = ['type3']
+    const current = create('Weak English', 'English', '30m', 1)
+    current.problemTypes = ['type3', 'type7']
+    const restored = parseBackup({ schemaVersion: 1, exportedAt: new Date().toISOString(), records: [legacy, current] }).records
+    expect(restored.map(record => record.problemTypes)).toEqual([['type3'], ['type3', 'type7']])
+    expect(JSON.parse(backupJson(restored)).records[1].problemTypes).toEqual(['type3', 'type7'])
+    expect(filterReviews(restored, { ...EMPTY_FILTERS, type: 'type7' })).toEqual([restored[1]])
+    expect(typeCounts(restored).find(item => item.key === 'type7')?.count).toBe(1)
+    const [headers, legacyRow, currentRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
+    const index = headers.indexOf('"type7"')
+    expect(index).toBe(headers.indexOf('"unclassified"') - 1)
+    expect([legacyRow[index], currentRow[index]]).toEqual(['"0"', '"1"'])
   })
 
   it('normalizes only missing revision fields in legacy JSON backups', () => {

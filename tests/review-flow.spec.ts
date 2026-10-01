@@ -156,11 +156,12 @@ test('Type 5 shares the existing card flow and appears in filtered distribution 
   await page.goto('./')
   const form = page.getByRole('region', { name: 'Review editor' })
   await expect(form.locator('.type-choice strong')).toHaveText([
-    'Type 1 · Length + Structure', 'Type 2 · Structure', 'Type 3 · Experience / Plan',
-    'Type 4 · Delayed-point', 'Type 5 · Career-summary / CV-style', 'Type 6 — Genre Mismatch', 'Unclassified / New Pattern',
+    'Type 1 — Length + Structure', 'Type 2 — Structure', 'Type 3 — Experience / Plan',
+    'Type 4 — Delayed-point', 'Type 5 — Career-summary / CV-style', 'Type 6 — Genre Mismatch',
+    'Type 7 · Weak English Writing', 'Unclassified / New Pattern',
   ])
-  const careerType = form.locator('.type-choice').filter({ hasText: 'Type 5 · Career-summary / CV-style' })
-  await expect(careerType.locator('small')).toHaveText('경력 전체를 업무 분야로 요약해 구체적 사례와 학업 동기가 드러나지 않음')
+  const careerType = form.locator('.type-choice').filter({ hasText: 'Type 5 — Career-summary / CV-style' })
+  await expect(careerType.locator('small')).toHaveText('경력 전체를 CV처럼 요약해 구체적 사례와 학업 동기가 드러나지 않음')
   await page.locator('#student-name').fill('QA Career Summary')
   for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '1' }).click()
   await form.locator('.type-choice').filter({ hasText: 'Type 3' }).click()
@@ -171,11 +172,11 @@ test('Type 5 shares the existing card flow and appears in filtered distribution 
   await page.reload()
   await page.getByRole('tab', { name: 'Problem patterns' }).click()
   const distribution = page.locator('.analysis-card').filter({ hasText: 'Problem Type Distribution' })
-  await expect(distribution.locator('.progress-row').filter({ hasText: 'Type 5 · Career-summary / CV-style' }).locator('strong')).toHaveText('1')
+  await expect(distribution.locator('.progress-row').filter({ hasText: 'Type 5 — Career-summary / CV-style' }).locator('strong')).toHaveText('1')
   await page.getByRole('button', { name: 'Filters' }).click()
   await page.locator('.filters-panel').getByRole('combobox', { name: 'Problem Type' }).selectOption('type5')
   await expect(page.getByText('1 review in current filters')).toBeVisible()
-  await expect(distribution.locator('.progress-row').filter({ hasText: 'Type 5 · Career-summary / CV-style' }).locator('strong')).toHaveText('1')
+  await expect(distribution.locator('.progress-row').filter({ hasText: 'Type 5 — Career-summary / CV-style' }).locator('strong')).toHaveText('1')
   await page.getByRole('button', { name: 'QA Career Summary', exact: true }).click()
   await expect(form.locator('.type-choice').filter({ hasText: 'Type 3' }).locator('input')).toBeChecked()
   await expect(careerType.locator('input')).toBeChecked()
@@ -186,7 +187,7 @@ test('Type 6 requires a selected genre, coexists with Type 2, and restores both 
   const form = page.getByRole('region', { name: 'Review editor' })
   await page.locator('#student-name').fill('QA Genre Mismatch')
   for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '2' }).click()
-  await form.locator('.type-choice').filter({ hasText: 'Type 2 · Structure' }).click()
+  await form.locator('.type-choice').filter({ hasText: 'Type 2 — Structure' }).click()
   const type6 = form.locator('.type-choice').filter({ hasText: 'Type 6 — Genre Mismatch' })
   await type6.click()
   await page.getByRole('button', { name: 'Save Review' }).click()
@@ -211,6 +212,29 @@ test('Type 6 requires a selected genre, coexists with Type 2, and restores both 
   await expect(subtypes).toHaveCount(0)
   await page.getByRole('button', { name: 'Update Review' }).click()
   await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('sop-score-tracker:records:v1')!).records[0].genreMismatchSubtypes)).toEqual([])
+})
+
+test('Type 7 saves with another problem type and appears in filtered distribution', async ({ page }) => {
+  await page.goto('./')
+  const form = page.getByRole('region', { name: 'Review editor' })
+  const type7 = form.locator('.type-choice').filter({ hasText: 'Type 7 · Weak English Writing' })
+  await expect(type7.locator('small')).toHaveText('영어 표현력이 부족한 상태에서 직접 영작하거나 AI/번역 결과를 수정하여 문법, 표현, 의미 전달이 크게 저하된 경우')
+  await page.locator('#student-name').fill('QA Weak English')
+  for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '2' }).click()
+  await form.locator('.type-choice').filter({ hasText: 'Type 1 — Length + Structure' }).click()
+  await type7.click()
+  await page.getByRole('button', { name: 'Save Review' }).click()
+  await expect(page.getByRole('row', { name: /QA Weak English/ })).toContainText('T1, T7')
+  await page.reload()
+  await page.getByRole('tab', { name: 'Problem patterns' }).click()
+  const distribution = page.locator('.analysis-card').filter({ hasText: 'Problem Type Distribution' })
+  await expect(distribution.locator('.progress-row').filter({ hasText: 'Type 7 · Weak English Writing' }).locator('strong')).toHaveText('1')
+  await page.getByRole('button', { name: 'Filters' }).click()
+  await page.locator('.filters-panel').getByRole('combobox', { name: 'Problem Type' }).selectOption('type7')
+  await expect(page.getByText('1 review in current filters')).toBeVisible()
+  await page.getByRole('button', { name: 'QA Weak English', exact: true }).click()
+  await expect(form.locator('.type-choice').filter({ hasText: 'Type 1 — Length + Structure' }).locator('input')).toBeChecked()
+  await expect(type7.locator('input')).toBeChecked()
 })
 
 test('Background saves separately from Field and filters existing dashboard statistics', async ({ page }) => {
