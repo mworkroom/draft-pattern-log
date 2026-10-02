@@ -9,7 +9,7 @@ import {
   typeCounts,
 } from './analytics'
 import {
-  CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS, REVISION_LABELS, REVISION_LEVELS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
+  CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS, REVISION_LABELS, REVISION_LEVELS, REVISION_ROUNDS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
   TYPE_KEYS, TYPE_LABELS, type ReviewRecordV1,
 } from './model'
 
@@ -27,6 +27,10 @@ function SelectFilter({ label, value, options, onChange, allLabel = 'All' }: {
   return <label className="filter-select"><span>{label}</span><select aria-label={label} value={value} onChange={event => onChange(event.target.value)}>
     <option value="">{allLabel}</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
   </select></label>
+}
+
+function RevisionRoundBadge({ round }: { round: ReviewRecordV1['revisionRound'] }) {
+  return round === 1 ? null : <span className="revision-round-badge" title={'Revision Round ' + round}>{round}차</span>
 }
 
 function Kpi({ icon, label, value, foot, tone }: {
@@ -93,6 +97,7 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
           <SelectFilter label="Career Stage" value={filters.careerStage} onChange={value => updateFilter('careerStage', value)} options={[{ value: '__missing', label: 'Not specified' }, ...CAREER_STAGE_OPTIONS.map(value => ({ value, label: value }))]} />
           <SelectFilter label="Sector" value={filters.sector} onChange={value => updateFilter('sector', value)} options={[{ value: '__missing', label: 'Not specified' }, ...SECTOR_OPTIONS.map(value => ({ value, label: value }))]} />
           <SelectFilter label="School Tier" value={filters.tier} onChange={value => updateFilter('tier', value)} options={[...TIERS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} />
+          <SelectFilter label="Revision Round" value={filters.revisionRound} onChange={value => updateFilter('revisionRound', value)} options={REVISION_ROUNDS.map(value => ({ value: String(value), label: String(value) }))} />
           <SelectFilter label="Problem Type" value={filters.type} onChange={value => updateFilter('type', value)} options={TYPE_KEYS.map(value => ({ value, label: TYPE_LABELS[value] }))} />
         </div>
       </div> : null}
@@ -138,7 +143,7 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
           </table></div>
         </div>
         <div className="analysis-card unclassified-card"><div className="card-head"><h4>Unclassified / New Pattern</h4><strong>{unclassified.length} <small>of {filtered.length} ({filtered.length ? Math.round(unclassified.length / filtered.length * 100) : 0}%)</small></strong></div>
-          {unclassified.length ? unclassified.slice(0, 5).map(record => <button className="pattern-record" type="button" key={record.id} onClick={() => onEdit(record)}><span><strong>{record.studentName}</strong><small>{record.reviewDate}</small></span><span>{record.unclassifiedNote}</span><ArrowRight size={15}/></button>) : <p className="empty-pattern">No new patterns in this range.</p>}
+          {unclassified.length ? unclassified.slice(0, 5).map(record => <button className="pattern-record" type="button" key={record.id} onClick={() => onEdit(record)}><span><strong>{record.studentName} <RevisionRoundBadge round={record.revisionRound} /></strong><small>{record.reviewDate}</small></span><span>{record.unclassifiedNote}</span><ArrowRight size={15}/></button>) : <p className="empty-pattern">No new patterns in this range.</p>}
         </div>
       </div> : null}
 
@@ -149,7 +154,7 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
       </div>
       <p className="recent-filter-note">Problem Type filters both dashboard metrics and reviews. Showing {visibleRows.length} of {tableRows.length} matching reviews.</p>
       <div className="table-wrap"><table className="reviews-table"><thead><tr><th>Date</th><th>Student</th><th>Lang</th><th>Level</th><th>Field</th><th>Structure</th><th>Rework</th><th>Type</th><th>Time</th><th aria-label="Actions"/></tr></thead><tbody>
-        {visibleRows.map(record => <tr key={record.id}><td>{record.reviewDate}</td><td><button className="student-link" type="button" onClick={() => onEdit(record)}>{record.studentName}</button></td><td><span className={'language-pill ' + (record.draftLanguage === 'Korean' ? 'korean' : 'english')}>{record.draftLanguage}</span></td><td>{record.level ?? '—'}</td><td>{record.field || '—'}</td><td>{STRUCTURE_KEYS.reduce((sum, key) => sum + record.structure[key], 0)} / 16</td><td>{record.rework.length} / {REWORK_KEYS.length}</td><td className="type-cell">{record.problemTypes.length ? record.problemTypes.map(key => key === 'unclassified' ? 'New' : key.replace('type', 'T')).join(', ') : '—'}</td><td>{record.timeSpent}</td><td><div className="row-actions"><button type="button" aria-label={'Edit ' + record.studentName} onClick={() => onEdit(record)}><Pencil size={14}/></button><button type="button" aria-label={'Delete ' + record.studentName} onClick={() => onDelete(record)}><Trash2 size={14}/></button></div></td></tr>)}
+        {visibleRows.map(record => <tr key={record.id}><td>{record.reviewDate}</td><td><div className="student-name-cell"><button className="student-link" type="button" onClick={() => onEdit(record)}>{record.studentName}</button><RevisionRoundBadge round={record.revisionRound} /></div></td><td><span className={'language-pill ' + (record.draftLanguage === 'Korean' ? 'korean' : 'english')}>{record.draftLanguage}</span></td><td>{record.level ?? '—'}</td><td>{record.field || '—'}</td><td>{STRUCTURE_KEYS.reduce((sum, key) => sum + record.structure[key], 0)} / 16</td><td>{record.rework.length} / {REWORK_KEYS.length}</td><td className="type-cell">{record.problemTypes.length ? record.problemTypes.map(key => key === 'unclassified' ? 'New' : key.replace('type', 'T')).join(', ') : '—'}</td><td>{record.timeSpent}</td><td><div className="row-actions"><button type="button" aria-label={'Edit ' + record.studentName} onClick={() => onEdit(record)}><Pencil size={14}/></button><button type="button" aria-label={'Delete ' + record.studentName} onClick={() => onDelete(record)}><Trash2 size={14}/></button></div></td></tr>)}
         {visibleRows.length === 0 ? <tr><td className="empty-table" colSpan={10}>{noData && records.length === 0 ? 'No reviews yet. Save the first review to start tracking.' : 'No reviews match the current filters or search.'}</td></tr> : null}
       </tbody></table></div>
       {topIssues.length ? <div className="issue-strip"><div className="issue-icon">✦</div><div><strong>Top issue trends</strong><small>Most common rework in selected reviews</small></div><div className="issue-tags">{topIssues.map(issue => <span key={issue.key}>{REWORK_LABELS[issue.key]} <b>{issue.count}</b></span>)}</div></div> : null}

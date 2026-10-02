@@ -21,6 +21,7 @@ export const TYPE_KEYS = ['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 
 export const GENRE_MISMATCH_SUBTYPES = ['researchProposal', 'promptResponse'] as const
 export const REVISION_KEYS = ['revision_experience_closing', 'revision_academic_plan', 'revision_conclusion'] as const
 export const REVISION_LEVELS = ['none', 'refine', 'rebuild'] as const
+export const REVISION_ROUNDS = [1, 2, 3] as const
 export const TIME_OPTIONS = ['20m', '30m', '45m', '60m', '90m', '120m+'] as const
 export const LANGUAGES = ['English', 'Korean'] as const
 export const LEVELS = ["Master's", "Bachelor's", 'Other'] as const
@@ -51,6 +52,7 @@ export type TypeKey = typeof TYPE_KEYS[number]
 export type GenreMismatchSubtype = typeof GENRE_MISMATCH_SUBTYPES[number]
 export type RevisionKey = typeof REVISION_KEYS[number]
 export type RevisionLevel = typeof REVISION_LEVELS[number]
+export type RevisionRound = typeof REVISION_ROUNDS[number]
 export type TimeOption = typeof TIME_OPTIONS[number]
 export type Language = typeof LANGUAGES[number]
 export type Level = typeof LEVELS[number]
@@ -67,6 +69,7 @@ export interface ReviewRecordV1 {
   createdAt: string
   updatedAt: string
   studentName: string
+  revisionRound: RevisionRound
   draftLanguage: Language
   level: Level | null
   field: string
@@ -124,7 +127,7 @@ export const TYPE_LABELS: Record<TypeKey, string> = {
   type1: 'Type 1 — Length + Structure',
   type2: 'Type 2 — Structure',
   type3: 'Type 3 — Experience / Plan',
-  type4: 'Type 4 — Delayed-point',
+  type4: 'Type 4 — Narrative / Indirect',
   type5: 'Type 5 — Career-summary / CV-style',
   type6: 'Type 6 — Genre Mismatch',
   type7: 'Type 7 · Weak English Writing',
@@ -135,7 +138,7 @@ export const TYPE_HELP: Record<TypeKey, string> = {
   type1: '분량 초과와 구조 문제가 함께 발생',
   type2: '분량보다 단락 역할, 배치가 주요 문제',
   type3: '과거 경험과 학업 계획의 분량 불균형',
-  type4: '핵심 의미가 뒤늦게 등장하는 서사형 구조',
+  type4: '핵심 의미를 늦추거나 숨기고, 극적 효과를 위해 우회적으로 서술',
   type5: '경력 전체를 CV처럼 요약해 구체적 사례와 학업 동기가 드러나지 않음',
   type6: '연구계획서 또는 문항별 답변지 형식으로 작성됨',
   type7: '직접 영작하거나 AI/번역 결과를 수정하여 문법, 표현, 의미 전달이 크게 저하된 경우',
@@ -186,6 +189,7 @@ export function blankDraft(reviewDate = localToday()): ReviewDraft {
   return {
     reviewDate,
     studentName: '',
+    revisionRound: 1,
     draftLanguage: 'English',
     level: "Master's",
     field: '',
@@ -223,6 +227,7 @@ export function structureTotal(structure: StructureScores): number {
 
 export function validateDraft(draft: ReviewDraft): string | null {
   if (!draft.studentName.trim()) return 'Student Name을 입력해 주세요.'
+  if (!REVISION_ROUNDS.includes(draft.revisionRound)) return 'Revision Round는 1, 2, 3 중에서 선택해 주세요.'
   if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.reviewDate) || Number.isNaN(Date.parse(draft.reviewDate))) return '유효한 Review Date를 선택해 주세요.'
   if (!STRUCTURE_KEYS.every(key => draft.structure[key] !== null)) return 'Structure Score 8개를 모두 선택해 주세요.'
   if (draft.problemTypes.includes('type6') && !draft.genreMismatchSubtypes.length) return 'Type 6의 하위 유형을 하나 이상 선택해 주세요.'
@@ -242,6 +247,7 @@ export function toRecord(draft: ReviewDraft, original?: ReviewRecordV1): ReviewR
     updatedAt: now,
     reviewDate: draft.reviewDate,
     studentName: draft.studentName.trim(),
+    revisionRound: draft.revisionRound,
     draftLanguage: draft.draftLanguage,
     level: draft.level,
     field: draft.field.trim(),

@@ -162,7 +162,7 @@ test('Type 5 shares the existing card flow and appears in filtered distribution 
   const form = page.getByRole('region', { name: 'Review editor' })
   await expect(form.locator('.type-choice strong')).toHaveText([
     'Type 1 — Length + Structure', 'Type 2 — Structure', 'Type 3 — Experience / Plan',
-    'Type 4 — Delayed-point', 'Type 5 — Career-summary / CV-style', 'Type 6 — Genre Mismatch',
+    'Type 4 — Narrative / Indirect', 'Type 5 — Career-summary / CV-style', 'Type 6 — Genre Mismatch',
     'Type 7 · Weak English Writing', 'Unclassified / New Pattern',
   ])
   const careerType = form.locator('.type-choice').filter({ hasText: 'Type 5 — Career-summary / CV-style' })

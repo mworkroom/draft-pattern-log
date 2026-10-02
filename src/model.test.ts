@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, blankDraft, FIELD_OPTIONS, GENRE_MISMATCH_SUBTYPES, REWORK_KEYS, REWORK_LABELS, REVISION_KEYS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
+import { CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, blankDraft, FIELD_OPTIONS, GENRE_MISMATCH_SUBTYPES, REWORK_KEYS, REWORK_LABELS, REVISION_KEYS, REVISION_ROUNDS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
 import { EMPTY_FILTERS, filterReviews, medianTime, reworkCounts, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, typeCounts } from './analytics'
 import { backupJson, exportCsv, parseBackup } from './storage'
 
@@ -321,5 +321,77 @@ describe('analytics and backup', () => {
     expect(exportCsv([record]).charCodeAt(0)).toBe(0xfeff)
     expect(exportCsv([record])).toContain('"revision_experience_closing","revision_academic_plan","revision_conclusion"')
     expect(exportCsv([record])).toContain('"none","none","none"')
+  })
+})
+
+
+describe('revision rounds and stable Type 4 identity', () => {
+  it('preserves Type 4 and normalizes only missing rounds to numeric 1', () => {
+    expect(TYPE_LABELS.type4).toBe('Type 4 — Narrative / Indirect')
+    expect(TYPE_HELP.type4).toBe('핵심 의미를 늦추거나 숨기고, 극적 효과를 위해 우회적으로 서술')
+    expect(blankDraft().revisionRound).toBe(1)
+    const draft = completeDraft()
+    draft.problemTypes = ['type4']
+    const record = toRecord(draft)
+    const { revisionRound: _round, ...legacy } = record
+    const exportedAt = new Date().toISOString()
+    const [restored] = parseBackup({ schemaVersion: 1, exportedAt, records: [legacy] }).records
+    expect(restored).toEqual(record)
+    expect(restored.problemTypes).toEqual(['type4'])
+    expect(recordToDraft(restored).revisionRound).toBe(1)
+    for (const round of REVISION_ROUNDS) {
+      const current = { ...record, revisionRound: round }
+      expect(parseBackup(JSON.parse(backupJson([current]))).records[0]).toEqual(current)
+    }
+    for (const revisionRound of [0, 4, 1.5, '2', null, undefined]) {
+      expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...record, revisionRound }] })).toThrow()
+    }
+    const [headers, row] = exportCsv([record]).slice(1).split('\r\n').map(line => line.split(','))
+    const index = headers.indexOf('"revision_round"')
+    expect(index).toBe(headers.indexOf('"student_name"') + 1)
+    expect(row[index]).toBe('"1"')
+    expect(row[headers.indexOf('"type4"')]).toBe('"1"')
+  })
+
+  it('applies the same problem classification rules in every round', () => {
+    expect(REVISION_ROUNDS).toEqual([1, 2, 3])
+    for (const round of REVISION_ROUNDS) {
+      for (const key of TYPE_KEYS) {
+        const draft = completeDraft()
+        draft.revisionRound = round
+        draft.problemTypes = [key]
+        draft.genreMismatchSubtypes = key === 'type6' ? ['researchProposal'] : []
+        draft.unclassifiedNote = key === 'unclassified' ? '새 패턴' : ''
+        expect(validateDraft(draft)).toBeNull()
+        const record = toRecord(draft)
+        expect(record).toMatchObject({ studentName: '홍길동', revisionRound: round, problemTypes: [key] })
+        expect(recordToDraft(record).revisionRound).toBe(round)
+      }
+      const draft = completeDraft()
+      draft.revisionRound = round
+      draft.problemTypes = ['type6']
+      expect(validateDraft(draft)).toMatch(/Type 6/)
+    }
+    const draft = completeDraft()
+    Object.assign(draft, { revisionRound: 4 })
+    expect(validateDraft(draft)).toMatch(/Revision Round/)
+  })
+
+  it('filters round counts and recurring problem types independently of other dimensions', () => {
+    const records = REVISION_ROUNDS.map(round => {
+      const draft = completeDraft()
+      draft.revisionRound = round
+      draft.problemTypes = ['type4', 'type7']
+      return toRecord(draft)
+    })
+    for (const round of REVISION_ROUNDS) {
+      const filtered = filterReviews(records, { ...EMPTY_FILTERS, revisionRound: String(round) })
+      expect(filtered).toEqual([records[round - 1]])
+      expect(typeCounts(filtered).find(item => item.key === 'type4')?.count).toBe(1)
+      expect(typeCounts(filtered).find(item => item.key === 'type7')?.count).toBe(1)
+    }
+    expect(filterReviews(records, { ...EMPTY_FILTERS, revisionRound: '2', type: 'type4' })).toEqual([records[1]])
+    expect(filterReviews(records, { ...EMPTY_FILTERS, revisionRound: '2', type: 'type3' })).toEqual([])
+    expect(filterReviews(records, EMPTY_FILTERS)).toEqual(records)
   })
 })

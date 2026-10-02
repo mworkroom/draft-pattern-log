@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from 'react'
 import { CircleHelp, RotateCcw } from 'lucide-react'
 import {
   AI_USAGE, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, ENGLISH_QUALITY, FIELD_OPTIONS, GENRE_MISMATCH_HELP, GENRE_MISMATCH_LABELS, GENRE_MISMATCH_SUBTYPES, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS,
-  REVISION_HELP, REVISION_KEYS, REVISION_LABELS, REVISION_LEVELS,
+  REVISION_HELP, REVISION_KEYS, REVISION_LABELS, REVISION_LEVELS, REVISION_ROUNDS,
   STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS, TIME_OPTIONS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS,
   structureTotal, type GenreMismatchSubtype, type ReviewDraft, type ReviewRecordV1, type ReworkKey, type StructureKey, type TypeKey,
 } from './model'
@@ -20,7 +20,7 @@ function SectionHeading({ children, aside }: { children: ReactNode; aside?: Reac
   return <div className="section-heading"><h3>{children}</h3><span>{aside}</span></div>
 }
 
-function Segmented<T extends string>({ options, value, onChange, label }: {
+function Segmented<T extends string | number>({ options, value, onChange, label }: {
   options: readonly T[]; value: T | null; onChange: (value: T) => void; label: string
 }) {
   return <div className="segmented" role="group" aria-label={label}>
@@ -55,9 +55,12 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
         {editing ? <button className="text-button" type="button" onClick={onCancelEdit}><RotateCcw size={15}/> Cancel</button> : null}
       </div>
 
+      <div className="form-grid two name-round">
       <div className="field-block">
         <label htmlFor="student-name">Student Name <span className="required">*</span></label>
         <input ref={nameRef} id="student-name" autoComplete="off" placeholder="Student name" value={draft.studentName} onChange={event => update('studentName', event.target.value)} />
+      </div>
+      <div className="field-block"><label>Revision Round</label><Segmented options={REVISION_ROUNDS} value={draft.revisionRound} label="Revision Round" onChange={value => update('revisionRound', value)} /></div>
       </div>
 
       <div className="form-grid two">
