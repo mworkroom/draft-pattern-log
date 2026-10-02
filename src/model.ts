@@ -41,13 +41,9 @@ export const FIELD_OPTIONS = [
   'Foundation',
   'Other',
 ] as const
-export const BACKGROUND_OPTIONS = [
-  'Corporate',
-  'Fresh Graduate',
-  'Public Sector',
-  'NGO',
-  'Other',
-] as const
+// Guidance only: current students / 0–2 years, 3–5 years, and 6+ years.
+export const CAREER_STAGE_OPTIONS = ['Student / Fresh Graduate', 'Early Career', 'Experienced Professional'] as const
+export const SECTOR_OPTIONS = ['Corporate', 'Public Sector', 'NGO / Nonprofit', 'Other'] as const
 
 export type StructureKey = typeof STRUCTURE_KEYS[number]
 export type ReworkKey = typeof REWORK_KEYS[number]
@@ -61,7 +57,8 @@ export type Level = typeof LEVELS[number]
 export type Tier = typeof TIERS[number]
 export type AiUsage = typeof AI_USAGE[number]
 export type EnglishQuality = typeof ENGLISH_QUALITY[number]
-export type Background = typeof BACKGROUND_OPTIONS[number] | ''
+export type CareerStage = typeof CAREER_STAGE_OPTIONS[number] | ''
+export type Sector = typeof SECTOR_OPTIONS[number] | ''
 export type StructureScores = Record<StructureKey, 0 | 1 | 2 | null>
 
 export interface ReviewRecordV1 {
@@ -73,7 +70,8 @@ export interface ReviewRecordV1 {
   draftLanguage: Language
   level: Level | null
   field: string
-  background: Background
+  careerStage: CareerStage
+  sector: Sector
   schoolTier: Tier | null
   wordLimit: number | null
   draftLength: number | null
@@ -140,7 +138,7 @@ export const TYPE_HELP: Record<TypeKey, string> = {
   type4: '핵심 의미가 뒤늦게 등장하는 서사형 구조',
   type5: '경력 전체를 CV처럼 요약해 구체적 사례와 학업 동기가 드러나지 않음',
   type6: '연구계획서 또는 문항별 답변지 형식으로 작성됨',
-  type7: '영어 표현력이 부족한 상태에서 직접 영작하거나 AI/번역 결과를 수정하여 문법, 표현, 의미 전달이 크게 저하된 경우',
+  type7: '직접 영작하거나 AI/번역 결과를 수정하여 문법, 표현, 의미 전달이 크게 저하된 경우',
   unclassified: '기존 Type으로 충분히 설명되지 않는 문제',
 }
 
@@ -191,7 +189,8 @@ export function blankDraft(reviewDate = localToday()): ReviewDraft {
     draftLanguage: 'English',
     level: "Master's",
     field: '',
-    background: '',
+    careerStage: '',
+    sector: '',
     schoolTier: 'Mid',
     wordLimit: '500',
     draftLength: '',
@@ -246,7 +245,8 @@ export function toRecord(draft: ReviewDraft, original?: ReviewRecordV1): ReviewR
     draftLanguage: draft.draftLanguage,
     level: draft.level,
     field: draft.field.trim(),
-    background: draft.background,
+    careerStage: draft.careerStage,
+    sector: draft.sector,
     schoolTier: draft.schoolTier,
     wordLimit: draft.wordLimit === '' ? null : Number(draft.wordLimit),
     draftLength: draft.draftLength === '' ? null : Number(draft.draftLength),

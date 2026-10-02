@@ -113,7 +113,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .filter-button:hover, .filter-button.active { border-color: #97baf0; background: #f0f7ff; }.filter-button b { font-size: 10px; background: #1166d5; color: #fff; width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; }
 .filters-panel { border: 1px solid #dbe6f4; background: #f9fbfe; border-radius: 7px; padding: 10px 12px; margin: -3px 0 14px; }
 .filter-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11px; }
-.filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 8px; }
 .filter-select { display: flex; flex-direction: column; gap: 3px; font-size: 10px; color: #5d6c82; }.filter-select select, .filter-select input { width: 100%; height: 29px; border: 1px solid #cbd9ea; background: #fff; border-radius: 5px; color: #253753; font-size: 11px; padding: 3px 7px; min-width: 0; }
 .kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 11px; }
 .kpi-card { border: 1px solid; border-radius: 6px; min-height: 126px; padding: 14px 13px 12px; display: flex; flex-direction: column; }

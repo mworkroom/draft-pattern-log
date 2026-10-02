@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BACKGROUND_OPTIONS, blankDraft, FIELD_OPTIONS, GENRE_MISMATCH_SUBTYPES, REWORK_KEYS, REWORK_LABELS, REVISION_KEYS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
+import { CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, blankDraft, FIELD_OPTIONS, GENRE_MISMATCH_SUBTYPES, REWORK_KEYS, REWORK_LABELS, REVISION_KEYS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
 import { EMPTY_FILTERS, filterReviews, medianTime, reworkCounts, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, typeCounts } from './analytics'
 import { backupJson, exportCsv, parseBackup } from './storage'
 
@@ -24,18 +24,18 @@ describe('review entry', () => {
     ])
   })
 
-  it('keeps Background separate from Field and optional in new reviews', () => {
-    expect(BACKGROUND_OPTIONS).toEqual([
-      'Corporate', 'Fresh Graduate', 'Public Sector', 'NGO', 'Other',
-    ])
+  it('stores optional Career Stage and Sector independently of Field', () => {
+    expect(CAREER_STAGE_OPTIONS).toEqual(['Student / Fresh Graduate', 'Early Career', 'Experienced Professional'])
+    expect(SECTOR_OPTIONS).toEqual(['Corporate', 'Public Sector', 'NGO / Nonprofit', 'Other'])
     const draft = completeDraft()
     draft.field = 'Development Studies'
-    expect(draft.background).toBe('')
+    expect([draft.careerStage, draft.sector]).toEqual(['', ''])
     expect(validateDraft(draft)).toBeNull()
-    draft.background = 'Public Sector'
+    draft.careerStage = 'Early Career'
+    draft.sector = 'Public Sector'
     const record = toRecord(draft)
-    expect([record.field, record.background]).toEqual(['Development Studies', 'Public Sector'])
-    expect(recordToDraft(record).background).toBe('Public Sector')
+    expect([record.field, record.careerStage, record.sector]).toEqual(['Development Studies', 'Early Career', 'Public Sector'])
+    expect(recordToDraft(record)).toMatchObject({ careerStage: 'Early Career', sector: 'Public Sector' })
   })
 
   it('starts with J’s chosen defaults but no structure scores', () => {
@@ -104,7 +104,7 @@ describe('review entry', () => {
 
   it('saves Type 7 alongside other types without a subtype or structure-score rule', () => {
     expect(TYPE_LABELS.type7).toBe('Type 7 · Weak English Writing')
-    expect(TYPE_HELP.type7).toBe('영어 표현력이 부족한 상태에서 직접 영작하거나 AI/번역 결과를 수정하여 문법, 표현, 의미 전달이 크게 저하된 경우')
+    expect(TYPE_HELP.type7).toBe('직접 영작하거나 AI/번역 결과를 수정하여 문법, 표현, 의미 전달이 크게 저하된 경우')
     const draft = completeDraft()
     draft.problemTypes = ['type1', 'type3', 'type7']
     expect(validateDraft(draft)).toBeNull()
@@ -230,25 +230,58 @@ describe('analytics and backup', () => {
     expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...legacy, revision_conclusion: null }] })).toThrow()
   })
 
-  it('restores legacy records without Background as blank and exports the new CSV column', () => {
-    const record = create('Legacy', 'English', '60m', 1)
-    const { background: _omitted, ...legacy } = record
-    const current = { ...create('Current', 'Korean', '30m', 1), background: 'NGO' as const, problemTypes: ['type5'] as const }
+  it('migrates every legacy Background without inferring the missing dimension', () => {
+    const { careerStage: _career, sector: _sector, ...legacy } = create('Legacy', 'English', '60m', 1)
     const exportedAt = new Date().toISOString()
-    const restored = parseBackup({ schemaVersion: 1, exportedAt, records: [legacy, current] }).records
-    expect(restored.map(item => item.background)).toEqual(['', 'NGO'])
-    expect(recordToDraft(restored[0]).background).toBe('')
-    expect(JSON.parse(backupJson(restored)).records.map((item: { background: string }) => item.background))
-      .toEqual(['', 'NGO'])
-    expect(filterReviews(restored, { ...EMPTY_FILTERS, background: '__missing' })).toEqual([restored[0]])
-    expect(filterReviews(restored, { ...EMPTY_FILTERS, background: 'NGO', type: 'type5' })).toEqual([restored[1]])
-    expect(filterReviews(restored, { ...EMPTY_FILTERS, background: 'Corporate' })).toEqual([])
-    const [headers, oldRow, currentRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
-    const index = headers.indexOf('"background"')
+    const cases = [
+      [undefined, '', ''], ['', '', ''], ['Not specified', '', ''],
+      ['Fresh Graduate', 'Student / Fresh Graduate', ''], ['Corporate', '', 'Corporate'],
+      ['Public Sector', '', 'Public Sector'], ['NGO', '', 'NGO / Nonprofit'], ['Other', '', 'Other'],
+    ]
+    for (const [background, careerStage, sector] of cases) {
+      const input = background === undefined ? legacy : { ...legacy, background }
+      const [restored] = parseBackup({ schemaVersion: 1, exportedAt, records: [input] }).records
+      expect(restored).toMatchObject({ careerStage, sector })
+      expect(restored).not.toHaveProperty('background')
+      expect(recordToDraft(restored)).toMatchObject({ careerStage, sector })
+      expect(parseBackup(JSON.parse(backupJson([restored]))).records).toEqual([restored])
+    }
+    for (const background of [null, 'Academic / Research']) {
+      expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...legacy, background }] })).toThrow()
+    }
+    const [current] = parseBackup({ schemaVersion: 1, exportedAt, records: [{
+      ...legacy, background: 'Fresh Graduate', careerStage: '', sector: 'Corporate',
+    }] }).records
+    expect(current).toMatchObject({ careerStage: '', sector: 'Corporate' })
+    for (const field of ['careerStage', 'sector']) {
+      for (const invalid of [null, 'Invalid']) {
+        expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...current, [field]: invalid }] })).toThrow()
+      }
+    }
+  })
+
+  it('filters both dimensions independently and exports separate CSV columns', () => {
+    const records = [
+      { ...create('Early Public', 'English', '60m', 1), careerStage: 'Early Career' as const, sector: 'Public Sector' as const, revision_academic_plan: 'rebuild' as const },
+      { ...create('Early Corporate', 'English', '30m', 1), careerStage: 'Early Career' as const, sector: 'Corporate' as const },
+      { ...create('Unknown Public', 'Korean', '30m', 1), sector: 'Public Sector' as const },
+      create('Unspecified', 'English', '30m', 1),
+    ]
+    const early = filterReviews(records, { ...EMPTY_FILTERS, careerStage: 'Early Career' })
+    const publicSector = filterReviews(records, { ...EMPTY_FILTERS, sector: 'Public Sector' })
+    expect(early).toEqual(records.slice(0, 2))
+    expect(publicSector).toEqual([records[0], records[2]])
+    expect(revisionRebuildPercent(early, 'revision_academic_plan').percent).toBe(50)
+    expect(revisionRebuildPercent(publicSector, 'revision_academic_plan').percent).toBe(50)
+    expect(filterReviews(records, { ...EMPTY_FILTERS, careerStage: 'Early Career', sector: 'Public Sector' })).toEqual([records[0]])
+    expect(filterReviews(records, { ...EMPTY_FILTERS, careerStage: '__missing' })).toEqual(records.slice(2))
+    expect(filterReviews(records, { ...EMPTY_FILTERS, sector: '__missing' })).toEqual([records[3]])
+    const [headers, row] = exportCsv(records).slice(1).split('\r\n').map(line => line.split(','))
+    const index = headers.indexOf('"career_stage"')
     expect(index).toBe(headers.indexOf('"field"') + 1)
-    expect([oldRow[index], currentRow[index]]).toEqual(['""', '"NGO"'])
-    expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...record, background: 'Academic / Research' }] })).toThrow()
-    expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...record, background: null }] })).toThrow()
+    expect(headers[index + 1]).toBe('"sector"')
+    expect([row[index], row[index + 1]]).toEqual(['"Early Career"', '"Public Sector"'])
+    expect(headers).not.toContain('"background"')
   })
 
   it('drops retired rework checks from old records while retaining the remaining actions', () => {

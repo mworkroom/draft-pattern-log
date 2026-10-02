@@ -9,13 +9,14 @@ export interface Filters {
   language: string
   level: string
   field: string
-  background: string
+  careerStage: string
+  sector: string
   tier: string
   type: string
 }
 
 export const EMPTY_FILTERS: Filters = {
-  from: '', to: '', language: '', level: '', field: '', background: '', tier: '', type: '',
+  from: '', to: '', language: '', level: '', field: '', careerStage: '', sector: '', tier: '', type: '',
 }
 
 export function filterReviews(records: ReviewRecordV1[], filters: Filters): ReviewRecordV1[] {
@@ -25,7 +26,8 @@ export function filterReviews(records: ReviewRecordV1[], filters: Filters): Revi
     (!filters.language || record.draftLanguage === filters.language) &&
     (!filters.level || (record.level ?? '__missing') === filters.level) &&
     (!filters.field || (record.field || '__missing').toLocaleLowerCase() === filters.field.toLocaleLowerCase()) &&
-    (!filters.background || (record.background || '__missing') === filters.background) &&
+    (!filters.careerStage || (record.careerStage || '__missing') === filters.careerStage) &&
+    (!filters.sector || (record.sector || '__missing') === filters.sector) &&
     (!filters.tier || (record.schoolTier ?? '__missing') === filters.tier) &&
     (!filters.type || record.problemTypes.includes(filters.type as TypeKey)),
   )

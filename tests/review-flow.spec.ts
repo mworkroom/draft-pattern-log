@@ -7,11 +7,14 @@ test('chosen defaults and review save persist after reload', async ({ page }) =>
     'Select a field', 'Business', 'STEM', 'Sport', 'Development Studies',
     'International Relations', 'Public Policy', 'Helping Professions', 'Social Sciences', 'UCAS', 'Foundation', 'Other',
   ])
-  await expect(page.locator('#background option')).toHaveText([
-    'Not specified', 'Corporate', 'Fresh Graduate', 'Public Sector',
-    'NGO', 'Other',
+  await expect(page.locator('#career-stage option')).toHaveText([
+    'Not specified', 'Student / Fresh Graduate', 'Early Career', 'Experienced Professional',
   ])
-  await expect(page.locator('#background')).toHaveValue('')
+  await expect(page.locator('#sector option')).toHaveText([
+    'Not specified', 'Corporate', 'Public Sector', 'NGO / Nonprofit', 'Other',
+  ])
+  await expect(page.locator('#career-stage')).toHaveValue('')
+  await expect(page.locator('#sector')).toHaveValue('')
   for (const [group, choice] of [
     ['Draft Language', 'English'], ['Level', "Master's"], ['School Tier', 'Mid'],
     ['AI Usage', 'Yes'], ['Time Spent', '60m'],
@@ -84,14 +87,16 @@ test('legacy localStorage reviews without revision fields load as None', async (
     delete backup.records[0].revision_academic_plan
     delete backup.records[0].revision_conclusion
     delete backup.records[0].revision_experience_closing
-    delete backup.records[0].background
+    delete backup.records[0].careerStage
+    delete backup.records[0].sector
     backup.records[0].rework = ['rebuildAcademicPlan', 'rebuildConclusion', 'addMotivationBridge']
     localStorage.setItem(key, JSON.stringify(backup))
   })
   await page.reload()
   await expect(page.locator('.storage-alert')).toHaveCount(0)
   await page.getByRole('button', { name: 'QA Old Review', exact: true }).click()
-  await expect(page.locator('#background')).toHaveValue('')
+  await expect(page.locator('#career-stage')).toHaveValue('')
+  await expect(page.locator('#sector')).toHaveValue('')
   await expect(page.locator('.footer-summary .summary-box.red')).toContainText('0 / 5')
   for (const area of ['Academic Plan', 'Conclusion', 'Experience Closing']) {
     await expect(page.getByRole('radio', { name: `${area}: none` })).toBeChecked()
@@ -218,7 +223,7 @@ test('Type 7 saves with another problem type and appears in filtered distributio
   await page.goto('./')
   const form = page.getByRole('region', { name: 'Review editor' })
   const type7 = form.locator('.type-choice').filter({ hasText: 'Type 7 · Weak English Writing' })
-  await expect(type7.locator('small')).toHaveText('영어 표현력이 부족한 상태에서 직접 영작하거나 AI/번역 결과를 수정하여 문법, 표현, 의미 전달이 크게 저하된 경우')
+  await expect(type7.locator('small')).toHaveText('직접 영작하거나 AI/번역 결과를 수정하여 문법, 표현, 의미 전달이 크게 저하된 경우')
   await page.locator('#student-name').fill('QA Weak English')
   for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '2' }).click()
   await form.locator('.type-choice').filter({ hasText: 'Type 1 — Length + Structure' }).click()
@@ -237,39 +242,79 @@ test('Type 7 saves with another problem type and appears in filtered distributio
   await expect(type7.locator('input')).toBeChecked()
 })
 
-test('Background saves separately from Field and filters existing dashboard statistics', async ({ page }) => {
+test('Career Stage and Sector save independently and filter dashboard statistics', async ({ page }) => {
   await page.goto('./')
   await page.locator('#student-name').fill('QA Public Sector')
   await page.locator('#field').selectOption('Development Studies')
-  await page.locator('#background').selectOption('Public Sector')
+  await page.locator('#sector').selectOption('Public Sector')
+  await page.locator('#career-stage').selectOption('Early Career')
   for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '1' }).click()
   await page.locator('.type-choice').filter({ hasText: 'Type 5' }).click()
   await page.getByRole('button', { name: 'Save Review' }).click()
-  await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('sop-score-tracker:records:v1')!).records[0].background))
+  await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('sop-score-tracker:records:v1')!).records[0].sector))
     .toBe('Public Sector')
 
-  await page.locator('#student-name').fill('QA No Background')
+  await page.locator('#student-name').fill('QA Not specified')
   for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '1' }).click()
   await page.getByRole('button', { name: 'Save Review' }).click()
   await page.reload()
   await page.getByRole('button', { name: 'QA Public Sector', exact: true }).click()
   await expect(page.locator('#field')).toHaveValue('Development Studies')
-  await expect(page.locator('#background')).toHaveValue('Public Sector')
-  await page.locator('#background').selectOption('Corporate')
+  await expect(page.locator('#sector')).toHaveValue('Public Sector')
+  await expect(page.locator('#career-stage')).toHaveValue('Early Career')
+  await page.locator('#sector').selectOption('Corporate')
   await page.getByRole('button', { name: 'Update Review' }).click()
   await page.getByRole('tab', { name: 'Problem patterns' }).click()
   const distribution = page.locator('.analysis-card').filter({ hasText: 'Problem Type Distribution' })
   await page.getByRole('button', { name: 'Filters' }).click()
-  const backgroundFilter = page.locator('.filters-panel').getByRole('combobox', { name: 'Background' })
-  await expect(backgroundFilter.locator('option')).toHaveText([
-    'All', 'Corporate', 'Fresh Graduate', 'Public Sector', 'NGO',
-    'Other', 'Not specified',
+  const sectorFilter = page.locator('.filters-panel').getByRole('combobox', { name: 'Sector' })
+  await expect(sectorFilter.locator('option')).toHaveText([
+    'All', 'Not specified', 'Corporate', 'Public Sector', 'NGO / Nonprofit', 'Other',
   ])
-  await backgroundFilter.selectOption('Corporate')
+  const careerFilter = page.locator('.filters-panel').getByRole('combobox', { name: 'Career Stage' })
+  await expect(careerFilter.locator('option')).toHaveText(['All', 'Not specified', 'Student / Fresh Graduate', 'Early Career', 'Experienced Professional'])
+  await careerFilter.selectOption('Early Career')
+  await expect(page.getByText('1 review in current filters')).toBeVisible()
+  await sectorFilter.selectOption('Public Sector')
+  await expect(page.getByText('0 reviews in current filters')).toBeVisible()
+  await careerFilter.selectOption('')
+  await sectorFilter.selectOption('Corporate')
   await expect(page.getByText('1 review in current filters')).toBeVisible()
   await expect(distribution.locator('.progress-row').filter({ hasText: 'Type 5' }).locator('strong')).toHaveText('1')
-  await backgroundFilter.selectOption('__missing')
+  await sectorFilter.selectOption('__missing')
   await expect(page.getByText('1 review in current filters')).toBeVisible()
   await expect(distribution.locator('.progress-row').filter({ hasText: 'Type 5' }).locator('strong')).toHaveText('0')
-  await expect(page.getByRole('row', { name: /QA No Background/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /QA Not specified/ })).toBeVisible()
+})
+
+
+test('legacy Background values migrate on load and save as independent fields', async ({ page }) => {
+  await page.goto('./')
+  await page.locator('#student-name').fill('QA Migration')
+  for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '1' }).click()
+  await page.getByRole('button', { name: 'Save Review' }).click()
+  const cases = [
+    ['Fresh Graduate', 'Student / Fresh Graduate', ''],
+    ['Corporate', '', 'Corporate'], ['Public Sector', '', 'Public Sector'],
+    ['NGO', '', 'NGO / Nonprofit'], ['Other', '', 'Other'], ['Not specified', '', ''],
+  ]
+  for (const [background, careerStage, sector] of cases) {
+    await page.evaluate(background => {
+      const key = 'sop-score-tracker:records:v1'
+      const backup = JSON.parse(localStorage.getItem(key)!)
+      delete backup.records[0].careerStage
+      delete backup.records[0].sector
+      backup.records[0].background = background
+      localStorage.setItem(key, JSON.stringify(backup))
+    }, background)
+    await page.reload()
+    await expect(page.locator('.storage-alert')).toHaveCount(0)
+    await page.getByRole('button', { name: 'QA Migration', exact: true }).click()
+    await expect(page.locator('#career-stage')).toHaveValue(careerStage)
+    await expect(page.locator('#sector')).toHaveValue(sector)
+    await page.getByRole('button', { name: 'Update Review' }).click()
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('sop-score-tracker:records:v1')!).records[0])
+    expect(stored).toMatchObject({ careerStage, sector })
+    expect(stored).not.toHaveProperty('background')
+  }
 })

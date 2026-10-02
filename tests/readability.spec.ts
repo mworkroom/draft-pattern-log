@@ -30,8 +30,20 @@ for (const width of [1280, 2048]) {
     const subtypes = page.getByRole('group', { name: 'Type 6 subtypes' })
     expect(await subtypes.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
     expect(await subtypes.locator('.type-choice strong').first().evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
-    expect(await page.locator('#background').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
-    expect(await page.locator('#background').evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
+    for (const id of ['#career-stage', '#sector']) {
+      expect(await page.locator(id).evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+      expect(await page.locator(id).evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
+    }
+    await page.locator('.filter-button').click()
+    const careerFilter = page.locator('.filters-panel').getByRole('combobox', { name: 'Career Stage', exact: true })
+    await careerFilter.selectOption('Student / Fresh Graduate')
+    expect(await careerFilter.evaluate(element => {
+      const select = element as HTMLSelectElement
+      const context = document.createElement('canvas').getContext('2d')!
+      context.font = getComputedStyle(select).font
+      return select.clientWidth >= context.measureText(select.selectedOptions[0].text).width + 40
+    })).toBe(true)
+    await page.locator('.filter-button').click()
     expect(await page.locator('.revision-table-wrap').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
     await page.getByRole('tab', { name: 'Problem patterns' }).click()
     const statsFontSize = await page.locator('.revision-stats-table td').first().evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))

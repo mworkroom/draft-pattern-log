@@ -1,5 +1,5 @@
 import {
-  AI_USAGE, BACKGROUND_OPTIONS, ENGLISH_QUALITY, GENRE_MISMATCH_SUBTYPES, LANGUAGES, LEVELS, REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS,
+  AI_USAGE, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, ENGLISH_QUALITY, GENRE_MISMATCH_SUBTYPES, LANGUAGES, LEVELS, REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS,
   STRUCTURE_KEYS, TIERS, TIME_OPTIONS, TYPE_KEYS,
   type BackupV1, type ReviewRecordV1,
 } from './model'
@@ -27,7 +27,8 @@ export function isReviewRecord(value: unknown): value is ReviewRecordV1 {
     isOption(value.draftLanguage, LANGUAGES) &&
     isOptionalOption(value.level, LEVELS) &&
     typeof value.field === 'string' &&
-    (value.background === '' || isOption(value.background, BACKGROUND_OPTIONS)) &&
+    (value.careerStage === '' || isOption(value.careerStage, CAREER_STAGE_OPTIONS)) &&
+    (value.sector === '' || isOption(value.sector, SECTOR_OPTIONS)) &&
     isOptionalOption(value.schoolTier, TIERS) &&
     isOptionalCount(value.wordLimit) && isOptionalCount(value.draftLength) &&
     isOptionalOption(value.aiUsage, AI_USAGE) &&
@@ -49,18 +50,30 @@ export function isReviewRecord(value: unknown): value is ReviewRecordV1 {
 function normalizeRecord(value: unknown): unknown {
   if (!isObject(value)) return value
   const missing = REVISION_KEYS.filter(key => !Object.hasOwn(value, key))
-  const missingBackground = !Object.hasOwn(value, 'background')
+  const missingCareerStage = !Object.hasOwn(value, 'careerStage')
+  const missingSector = !Object.hasOwn(value, 'sector')
+  const hasBackground = Object.hasOwn(value, 'background')
+  const legacyBackground = value.background
+  if (hasBackground && legacyBackground !== '' && legacyBackground !== 'Not specified' &&
+    !isOption(legacyBackground, ['Fresh Graduate', 'Corporate', 'Public Sector', 'NGO', 'Other'])) {
+    throw new Error('지원하지 않는 Background 값입니다.')
+  }
+  const careerStage = legacyBackground === 'Fresh Graduate' ? 'Student / Fresh Graduate' : ''
+  const sector = legacyBackground === 'NGO' ? 'NGO / Nonprofit'
+    : isOption(legacyBackground, SECTOR_OPTIONS) ? legacyBackground : ''
   const missingGenreSubtypes = !Object.hasOwn(value, 'genreMismatchSubtypes')
   const originalRework = value.rework
   const rework = Array.isArray(originalRework)
     ? originalRework.filter(item => typeof item !== 'string' || !RETIRED_REWORK_KEYS.has(item))
     : null
   const removedRework = Array.isArray(originalRework) && rework !== null && rework.length !== originalRework.length
-  if (!missing.length && !removedRework && !missingBackground && !missingGenreSubtypes) return value
+  if (!missing.length && !removedRework && !missingCareerStage && !missingSector && !hasBackground && !missingGenreSubtypes) return value
+  const { background: _legacyBackground, ...current } = value
   return {
-    ...value,
+    ...current,
     ...(removedRework ? { rework } : {}),
-    ...(missingBackground ? { background: '' } : {}),
+    ...(missingCareerStage ? { careerStage } : {}),
+    ...(missingSector ? { sector } : {}),
     ...(missingGenreSubtypes ? { genreMismatchSubtypes: [] } : {}),
     ...Object.fromEntries(missing.map(key => [key, 'none'])),
   }
@@ -120,14 +133,14 @@ function csvCell(value: string | number | null): string {
 
 export function exportCsv(records: ReviewRecordV1[]): string {
   const headers = [
-    'id', 'review_date', 'created_at', 'updated_at', 'student_name', 'draft_language', 'level', 'field', 'background',
+    'id', 'review_date', 'created_at', 'updated_at', 'student_name', 'draft_language', 'level', 'field', 'career_stage', 'sector',
     'school_tier', 'word_limit', 'draft_length', 'ai_usage',
     ...STRUCTURE_KEYS, 'structure_total', ...REWORK_KEYS, 'rework_total',
     ...TYPE_KEYS, ...GENRE_MISMATCH_SUBTYPES, 'unclassified_note', ...REVISION_KEYS, 'time_spent', 'surface_english_quality', 'notes',
   ]
   const rows = records.map(record => [
     record.id, record.reviewDate, record.createdAt, record.updatedAt, record.studentName,
-    record.draftLanguage, record.level, record.field, record.background, record.schoolTier, record.wordLimit,
+    record.draftLanguage, record.level, record.field, record.careerStage, record.sector, record.schoolTier, record.wordLimit,
     record.draftLength, record.aiUsage,
     ...STRUCTURE_KEYS.map(key => record.structure[key]),
     STRUCTURE_KEYS.reduce((sum, key) => sum + record.structure[key], 0),
