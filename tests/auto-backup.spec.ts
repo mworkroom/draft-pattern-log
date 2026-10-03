@@ -28,15 +28,18 @@ test('folder backup survives lost browser data and never overwrites the existing
   })
 
   await page.goto('./')
+  await page.getByRole('button', { name: '설정', exact: true }).click()
   await expect(page.locator('.backup-strip')).toContainText('처음 한 번')
   await page.getByRole('button', { name: '백업 폴더 선택' }).click()
   await expect(page.locator('.backup-strip')).toContainText('EDM 폴더 연결됨')
+  await page.getByRole('dialog', { name: '설정', exact: true }).getByRole('button', { name: '닫기', exact: true }).click()
 
   await page.locator('#student-name').fill('Backup QA Student')
   for (const row of await page.locator('.score-row').all()) {
     await row.getByRole('button', { name: '1' }).click()
   }
   await page.getByRole('button', { name: 'Save Review' }).click()
+  await page.getByRole('button', { name: '설정', exact: true }).click()
   await expect(page.locator('.backup-strip')).toContainText('자동 백업 완료')
   const readFile = () => page.evaluate(async () => {
     const root = await navigator.storage.getDirectory()
@@ -55,6 +58,7 @@ test('folder backup survives lost browser data and never overwrites the existing
     })
   })
   await page.reload()
+  await page.getByRole('button', { name: '설정', exact: true }).click()
   await expect(page.locator('.backup-strip')).toContainText('처음 한 번')
   await page.getByRole('button', { name: '백업 폴더 선택' }).click()
   await expect(page.locator('.backup-strip.conflict')).toContainText('폴더 백업 1건과 브라우저 기록 0건')
@@ -64,12 +68,14 @@ test('folder backup survives lost browser data and never overwrites the existing
   await page.getByRole('button', { name: '폴더 파일에서 복구' }).click()
   await expect(page.getByRole('button', { name: 'Backup QA Student', exact: true })).toBeVisible()
   await expect(page.locator('.backup-strip.ready')).toContainText('자동 백업이 연결됐습니다')
+  await page.getByRole('dialog', { name: '설정', exact: true }).getByRole('button', { name: '닫기', exact: true }).click()
 
   await page.locator('#student-name').fill('Second QA Student')
   for (const row of await page.locator('.score-row').all()) {
     await row.getByRole('button', { name: '1' }).click()
   }
   await page.getByRole('button', { name: 'Save Review' }).click()
+  await page.getByRole('button', { name: '설정', exact: true }).click()
   await expect(page.locator('.backup-strip.ready')).toContainText('자동 백업 완료')
   expect((await readFile()).records).toHaveLength(2)
   const historyCount = await page.evaluate(async () => {
@@ -81,6 +87,7 @@ test('folder backup survives lost browser data and never overwrites the existing
     return (JSON.parse(await (await file.getFile()).text()) as { records: unknown[] }).records.length
   })
   expect(historyCount).toBe(1)
+  await page.getByRole('dialog', { name: '설정', exact: true }).getByRole('button', { name: '닫기', exact: true }).click()
 
   await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory()
@@ -97,6 +104,8 @@ test('folder backup survives lost browser data and never overwrites the existing
     await row.getByRole('button', { name: '1' }).click()
   }
   await page.getByRole('button', { name: 'Save Review' }).click()
+  await expect(page.getByRole('button', { name: '설정', exact: true })).toHaveClass(/has-issue/)
+  await page.getByRole('button', { name: '설정', exact: true }).click()
   await expect(page.locator('.backup-strip.error')).toContainText('앱 밖에서 변경')
   expect((await readFile()).records[0].studentName).toBe('Changed outside app')
 

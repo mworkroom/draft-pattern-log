@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import {
-  ChartNoAxesCombined, ClipboardList, Download, FileJson, House, Save, ShieldCheck, Upload,
+  ChartNoAxesCombined, ClipboardList, Download, FileJson, House, Save, Settings, Upload,
 } from 'lucide-react'
 import Dashboard from './Dashboard'
 import ReviewForm from './ReviewForm'
@@ -46,6 +46,7 @@ export default function App() {
   const [formError, setFormError] = useState('')
   const [notice, setNotice] = useState('')
   const [backupAt, setBackupAt] = useState(() => lastBackupAt())
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [fileBackup, setFileBackup] = useState<FileBackupState>({ kind: 'checking', message: '자동 백업 폴더를 확인하는 중입니다.' })
   const importRef = useRef<HTMLInputElement>(null)
   const folderRef = useRef<BackupDirectory | null>(null)
@@ -390,29 +391,9 @@ export default function App() {
     }
   }
 
-  return <div className="app-shell">
-    <header className="app-header">
-      <div className="brand"><div className="brand-mark"><ClipboardList size={27} strokeWidth={2.2}/></div><div><h1>SOP Score Tracker</h1><p>Track review quality and rework patterns</p></div></div>
-      <nav className="main-nav" aria-label="Main navigation">
-        <button type="button" className="active" onClick={() => goTo('.dashboard-intro')}><House size={16}/> Dashboard</button>
-        <button type="button" onClick={() => goTo('.recent-head')}><ClipboardList size={16}/> Reviews</button>
-        <button type="button" onClick={() => goTo('.analysis-head')}><ChartNoAxesCombined size={16}/> Insights</button>
-      </nav>
-      <div className="header-tools">
-        <span className={'backup-status ' + (needsBackup ? 'needed' : '')} title={backupAt ? 'Last JSON backup: ' + new Date(backupAt).toLocaleString() + ' · Check manually downloaded files.' : 'No JSON backup yet'}><ShieldCheck size={15}/>{needsBackup ? 'Backup needed' : backupAt ? 'Backed up ' + new Date(backupAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Local only'}</span>
-        <div className="backup-menu">
-          <button type="button" className="tool-button" onClick={exportBackup} title="Backup JSON"><FileJson size={16}/><span>Backup</span></button>
-          <button type="button" className="icon-button" onClick={() => importRef.current?.click()} title="Restore JSON" aria-label="Restore JSON"><Upload size={17}/></button>
-          <button type="button" className="icon-button" onClick={exportSpreadsheet} title="Export CSV" aria-label="Export CSV"><Download size={17}/></button>
-          <input ref={importRef} hidden type="file" accept=".json,application/json" onChange={event => { const file = event.target.files?.[0]; if (file) void importBackup(file) }} />
-        </div>
-      </div>
-    </header>
+  const jsonSettings = <section className="settings-section" aria-label="JSON 백업"><h3>JSON 백업</h3>
     <div className={'backup-strip ' + fileBackup.kind} role={fileBackup.kind === 'conflict' || fileBackup.kind === 'error' ? 'alert' : 'status'}>
-      <div className="backup-strip-copy">
-        <strong>자동 JSON 백업</strong>
-        <span>{fileBackup.message}</span>
-      </div>
+      <div className="backup-strip-copy"><strong>자동 백업 폴더</strong><span>{fileBackup.message}</span></div>
       {fileBackup.kind === 'conflict' ? <div className="backup-strip-actions">
         <button className="tool-button" type="button" onClick={() => void restoreFromFolder()}>폴더 파일에서 복구</button>
         {records.length > 0 && !storageError ? <button className="tool-button" type="button" onClick={() => void replaceFolderWithLocal()}>현재 기록을 폴더에 저장</button> : null}
@@ -424,9 +405,35 @@ export default function App() {
       </div> : null}
       {fileBackup.kind === 'ready' ? <button className="text-button" type="button" onClick={() => void chooseFolder()}>폴더 변경</button> : null}
     </div>
-    <Suspense fallback={<div className="cloud-strip"><div className="cloud-copy"><strong>클라우드 백업</strong><span>연결 기능을 불러오는 중입니다.</span></div></div>}>
-      <CloudBackupPanel records={records} writable={!storageError && !['checking', 'conflict'].includes(fileBackup.kind)} restoreAllowed={!['checking', 'conflict'].includes(fileBackup.kind)} onRestore={restoreCloudBackup}/>
-    </Suspense>
+    <div className="json-backup-history"><strong>백업 기록</strong>
+      <p>{backupAt ? `최근 JSON 백업 · ${new Date(backupAt).toLocaleString()}` : '아직 JSON 백업 기록이 없습니다.'}</p>
+      {needsBackup ? <p>현재 기록의 JSON 백업이 필요합니다.</p> : null}
+    </div>
+    <div className="settings-actions">
+      <button type="button" className="tool-button" onClick={exportBackup} title="Backup JSON"><FileJson size={17}/>Backup</button>
+      <button type="button" className="tool-button" onClick={() => importRef.current?.click()}><Upload size={17}/>Restore JSON</button>
+    </div>
+  </section>
+
+  return <div className="app-shell">
+    <header className="app-header">
+      <div className="brand"><div className="brand-mark"><ClipboardList size={27} strokeWidth={2.2}/></div><div><h1>SOP Score Tracker</h1><p>Track review quality and rework patterns</p></div></div>
+      <nav className="main-nav" aria-label="Main navigation">
+        <button type="button" className="active" onClick={() => goTo('.dashboard-intro')}><House size={16}/> Dashboard</button>
+        <button type="button" onClick={() => goTo('.recent-head')}><ClipboardList size={16}/> Reviews</button>
+        <button type="button" onClick={() => goTo('.analysis-head')}><ChartNoAxesCombined size={16}/> Insights</button>
+      </nav>
+      <div className="header-tools">
+        <Suspense fallback={<span className="backup-status" role="status">백업 확인 중</span>}>
+          <CloudBackupPanel records={records} writable={!storageError && !['checking', 'conflict'].includes(fileBackup.kind)} restoreAllowed={!['checking', 'conflict'].includes(fileBackup.kind)} onRestore={restoreCloudBackup}
+            settingsOpen={settingsOpen} onSettingsChange={setSettingsOpen} jsonSettings={jsonSettings}/>
+        </Suspense>
+          <button type="button" className="icon-button" onClick={exportSpreadsheet} title="Export CSV" aria-label="Export CSV"><Download size={17}/></button>
+          <button type="button" className={'icon-button settings-button ' + (['error', 'conflict', 'permission'].includes(fileBackup.kind) ? 'has-issue' : '')}
+            title={['error', 'conflict', 'permission'].includes(fileBackup.kind) ? '설정 · JSON 백업 확인 필요' : '설정'} aria-label="설정" aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}><Settings size={20}/></button>
+      </div>
+    </header>
+    <input ref={importRef} hidden type="file" accept=".json,application/json" onChange={event => { const file = event.target.files?.[0]; if (file) void importBackup(file) }} />
     {storageError ? <div className="storage-alert" role="alert">{storageError}</div> : null}
     {notice ? <div className="toast" role="status"><Save size={15}/>{notice}</div> : null}
     <main className="workspace">

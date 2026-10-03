@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { ShieldCheck } from 'lucide-react'
+import AppDialog from './AppDialog'
 import type { Session } from '@supabase/supabase-js'
 import { CloudBackupCoordinator, sameBackupRecords, type CloudState } from './cloudBackup'
 import { cloudRepository, listCloudHistory, readCloudSnapshot, supabase, type SnapshotSummary } from './supabase'
@@ -10,9 +12,12 @@ interface Props {
   writable: boolean
   restoreAllowed: boolean
   onRestore: (backup: BackupV1) => Promise<boolean>
+  settingsOpen: boolean
+  onSettingsChange: (open: boolean) => void
+  jsonSettings: ReactNode
 }
 
-export default function CloudBackupPanel({ records, writable, restoreAllowed, onRestore }: Props) {
+export default function CloudBackupPanel({ records, writable, restoreAllowed, onRestore, settingsOpen, onSettingsChange, jsonSettings }: Props) {
   const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [state, setState] = useState<CloudState>({ kind: 'checking', message: '로그인 상태를 확인하는 중입니다.' })
@@ -20,6 +25,7 @@ export default function CloudBackupPanel({ records, writable, restoreAllowed, on
   const [selected, setSelected] = useState('')
   const [actionError, setActionError] = useState('')
   const [acting, setActing] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const coordinator = useRef<CloudBackupCoordinator | null>(null)
   const recordsRef = useRef(records)
   const writableRef = useRef(writable)
@@ -132,28 +138,52 @@ export default function CloudBackupPanel({ records, writable, restoreAllowed, on
   else if (!authReady) message = '로그인 상태를 확인하는 중입니다.'
   else if (!session) message = 'Google 계정으로 연결하면 JSON과 Supabase에 함께 백업합니다.'
 
-  return <section className={'cloud-strip ' + (session ? state.kind : 'signed-out')} aria-label="클라우드 백업">
-    <div className="cloud-summary">
-      <div className="cloud-copy"><strong>클라우드 백업</strong><span role={state.kind === 'error' || state.kind === 'conflict' ? 'alert' : 'status'}>{message}</span></div>
-      <div className="cloud-actions">
-        {supabase && authReady && !session ? <button className="tool-button" type="button" disabled={acting} onClick={() => void login()}>Google로 연결</button> : null}
-        {session ? <>
-          {['error', 'conflict', 'paused'].includes(state.kind) ? <button className="tool-button" disabled={acting} onClick={() => void coordinator.current?.retry()}>다시 확인</button> : null}
-          {state.kind === 'conflict' ? <>
-            <button className="tool-button" disabled={acting || !restoreAllowed} onClick={() => void restore()}>클라우드에서 복구</button>
-            {records.length > 0 ? <button className="tool-button" disabled={acting || !writable} onClick={() => void useLocal()}>현재 기록을 클라우드에 백업</button> : null}
-          </> : null}
-          <button className="tool-button" disabled={acting || state.kind === 'writing' || state.kind === 'checking'} onClick={() => void showHistory()}>백업 이력</button>
-          <button className="text-button" disabled={acting || state.kind === 'writing'} onClick={() => void action(async () => {
+  const compactMessage = !supabase ? '클라우드 미설정' : !authReady ? '백업 확인 중'
+    : !session ? '클라우드 미연결' : state.kind === 'ready'
+      ? state.savedAt ? `백업 ${new Date(state.savedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${records.length}건` : '클라우드 연결됨'
+      : ({ checking: '백업 확인 중', writing: '백업 저장 중', error: '백업 실패', conflict: '백업 확인 필요', paused: '백업 대기 중' } as const)[state.kind]
+  const openHistory = () => {
+    setHistoryOpen(true)
+    if (session) void showHistory()
+  }
+  const cloudDetails = <>
+    <p className="cloud-detail-status" role={session && ['error', 'conflict'].includes(state.kind) ? 'alert' : 'status'}>{message}</p>
+    {actionError ? <p className="cloud-error" role="alert">{actionError}</p> : null}
+    {session ? <div className="cloud-actions">
+      {['error', 'conflict', 'paused'].includes(state.kind) ? <button className="tool-button" disabled={acting} onClick={() => void coordinator.current?.retry()}>다시 확인</button> : null}
+      {state.kind === 'conflict' ? <>
+        <button className="tool-button" disabled={acting || !restoreAllowed} onClick={() => void restore()}>클라우드에서 복구</button>
+        {records.length > 0 ? <button className="tool-button" disabled={acting || !writable} onClick={() => void useLocal()}>현재 기록을 클라우드에 백업</button> : null}
+      </> : null}
+    </div> : null}
+  </>
+
+  return <>
+    <button type="button" className={'backup-status cloud-header-status ' + (session ? state.kind : 'signed-out')}
+      aria-label="클라우드 백업" aria-haspopup="dialog" title={message} onClick={openHistory}>
+      <ShieldCheck size={17}/><span role="status">{compactMessage}</span>
+    </button>
+    {settingsOpen ? <AppDialog title="설정" onClose={() => onSettingsChange(false)}>
+      {jsonSettings}
+      <section className="settings-section" aria-label="로그인"><h3>로그인</h3>
+        {session ? <><p className="cloud-account">{session.user.email} · mworkroom</p>
+          <button className="tool-button" disabled={acting || state.kind === 'writing'} onClick={() => void action(async () => {
             const { error } = await supabase!.auth.signOut({ scope: 'local' })
             if (error) throw new Error(error.message)
+            setHistory(null)
           })}>연결 해제</button>
-        </> : null}
-      </div>
-    </div>
-    {session ? <span className="cloud-account">{session.user.email} · mworkroom</span> : null}
-    {actionError ? <p className="cloud-error" role="alert">{actionError}</p> : null}
-    {session && history ? <div className="cloud-history">
+        </> : <><p>{authReady ? 'Google 계정으로 연결하면 클라우드에도 함께 백업합니다.' : '로그인 상태를 확인하는 중입니다.'}</p>
+          {supabase && authReady ? <button className="tool-button" type="button" disabled={acting} onClick={() => void login()}>Google로 연결</button> : null}
+        </>}
+        {cloudDetails}
+      </section>
+    </AppDialog> : null}
+    {historyOpen ? <AppDialog title="클라우드 백업" onClose={() => setHistoryOpen(false)}>
+      <section className={'cloud-details ' + (session ? state.kind : 'signed-out')} aria-label="클라우드 백업 상세">
+      {cloudDetails}
+      {session ? <button className="tool-button" disabled={acting || state.kind === 'writing' || state.kind === 'checking'} onClick={() => void showHistory()}>백업 이력</button>
+        : <button className="tool-button" onClick={() => { setHistoryOpen(false); onSettingsChange(true) }}>로그인 설정 열기</button>}
+      {session && history ? <div className="cloud-history">
       {history.length ? <>
         <label htmlFor="cloud-version">백업 버전 <select id="cloud-version" value={selected} onChange={event => setSelected(event.target.value)}>
           {history.map(item => <option key={item.id} value={item.id}>{new Date(item.createdAt).toLocaleString()} · {item.recordCount}건</option>)}
@@ -165,7 +195,8 @@ export default function CloudBackupPanel({ records, writable, restoreAllowed, on
         })}>JSON 다운로드</button>
         <span>최근 50개 표시 · 이전 버전도 DB에 보관</span>
       </> : <span>아직 클라우드 백업이 없습니다.</span>}
-      <button className="text-button" onClick={() => setHistory(null)}>닫기</button>
-    </div> : null}
-  </section>
+      </div> : null}
+      </section>
+    </AppDialog> : null}
+  </>
 }

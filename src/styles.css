@@ -274,17 +274,36 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .backup-strip > .text-button { margin-left: auto; }
 .backup-strip .tool-button { font-size: 14px; padding: 0 12px; white-space: nowrap; }
 .backup-strip .text-button { font-size: 14px; }
-.cloud-strip { flex: none; padding: 9px 20px; border-bottom: 1px solid #d8e4f2; background: #f4f9ff; color: #28486f; }
-.cloud-strip.ready { background: #f1fbf7; color: #236747; }
-.cloud-strip.error, .cloud-strip.conflict { background: #fff4f5; color: #933747; }
-.cloud-summary, .cloud-copy, .cloud-actions, .cloud-history { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-width: 0; }
-.cloud-copy { flex: 1 1 360px; }
-.cloud-copy strong { font-size: 14px; white-space: nowrap; }
-.cloud-copy > span { font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
-.cloud-actions { margin-left: auto; }
-.cloud-strip .tool-button, .cloud-strip .text-button { font-size: 14px; min-height: 36px; height: auto; padding: 7px 12px; }
-.cloud-strip button:disabled { opacity: .55; cursor: default; }
-.cloud-account, .cloud-history > span { display: block; font-size: 13px; line-height: 1.45; margin-top: 4px; overflow-wrap: anywhere; }
+.cloud-header-status { border: 0; border-radius: 6px; background: transparent; padding: 9px 8px; min-height: 40px; font-size: 14px; }
+.cloud-header-status:hover { background: #eef5ff; }
+.cloud-header-status.ready { color: #236747; }
+.cloud-header-status.error, .cloud-header-status.conflict { color: #a32e44; background: #fff2f4; }
+.cloud-header-status.writing, .cloud-header-status.paused { color: #805815; }
+.settings-button { position: relative; flex: none; }
+.settings-button.has-issue::after { content: ''; position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: #ca6b20; border: 1px solid white; }
+.app-dialog { margin: auto; width: min(680px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 0; border: 1px solid #d8e4f2; border-radius: 14px; color: #19233b; background: #fff; box-shadow: 0 20px 80px #182a4f40; overflow: hidden; }
+.app-dialog::backdrop { background: #15284666; }
+.dialog-content { display: flex; flex-direction: column; max-height: calc(100dvh - 50px); }
+.dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 24px; border-bottom: 1px solid #e1e8f2; flex: none; }
+.dialog-heading h2 { font-size: 22px; margin: 0; }
+.dialog-body { overflow-y: auto; padding: 24px; min-height: 0; font-size: 15px; line-height: 1.6; }
+.dialog-body p { margin: 8px 0 14px; overflow-wrap: anywhere; }
+.settings-section + .settings-section { margin-top: 24px; padding-top: 24px; border-top: 1px solid #e1e8f2; }
+.settings-section h3 { margin: 0 0 14px; font-size: 17px; }
+.settings-section .backup-strip { border: 1px solid #d8e4f2; border-radius: 8px; padding: 14px; align-items: flex-start; flex-wrap: wrap; }
+.settings-section .backup-strip-copy { flex-direction: column; gap: 5px; }
+.settings-section .backup-strip-copy span { font-size: 14px; }
+.settings-section .backup-strip-actions { width: 100%; margin-left: 0; justify-content: flex-start; }
+.json-backup-history { margin-top: 16px; }
+.json-backup-history strong { font-size: 14px; }
+.cloud-actions, .cloud-history, .settings-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-width: 0; }
+.cloud-details .cloud-actions { margin-bottom: 12px; }
+.dialog-body .tool-button, .dialog-body .text-button { font-size: 14px; min-height: 40px; height: auto; padding: 8px 12px; white-space: normal; text-align: left; }
+.dialog-body button:disabled { opacity: .55; cursor: default; }
+.cloud-account, .cloud-history > span { display: block; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.cloud-detail-status { color: #49607e; }
+.cloud-details.ready .cloud-detail-status { color: #236747; }
+.cloud-details.error .cloud-detail-status, .cloud-details.conflict .cloud-detail-status { color: #933747; }
 .cloud-error { font-size: 14px; margin: 7px 0 0; overflow-wrap: anywhere; }
 .cloud-history { padding-top: 10px; font-size: 14px; }
 .cloud-history label { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
