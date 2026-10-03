@@ -1,0 +1,39 @@
+# Draft Pattern Log 클라우드 백업
+
+기존 브라우저 저장과 폴더 JSON 백업을 유지하고, `mworkroom` (`ddlwainwollvpaeccpty`)에 계정별 전체 JSON 백업을 추가한다. 클라우드는 추가 복구 경로이며, 앱의 분석은 기존 로컬 기록으로 계산한다.
+
+## 첫 연결
+
+1. 기존 앱에서 현재 기록을 수동 JSON으로 한 번 내보내 보관한다.
+2. Supabase Authentication → URL Configuration의 Redirect URLs에 다음 정확한 주소를 **추가**한다. 다른 앱의 Site URL과 기존 Redirect URLs는 유지한다.
+   - `https://mworkroom.github.io/draft-pattern-log/`
+   - 로컬 검증용: `http://127.0.0.1:5173/draft-pattern-log/`
+3. 로컬은 `.env.example`을 참고해 `.env.local`에 프로젝트 URL과 publishable key를 설정한다. 관리자·service_role 키는 사용하지 않는다.
+4. GitHub Pages 빌드는 Actions 변수 `VITE_SUPABASE_PUBLISHABLE_KEY`를 사용한다. 프로젝트 URL은 워크플로에 지정돼 있다. 공개 키가 없으면 빌드가 실패하도록 구성했다.
+5. 앱의 `Google로 연결`을 누른다. 로그인 세션은 다른 앱과 구분되는 이 앱 전용 저장 키를 사용한다.
+6. 처음 연결한 계정의 클라우드가 비어 있으면 현재 유효한 로컬 기록을 백업한다. 기존 클라우드와 로컬이 다르면 자동 교체를 중단하고 비교·복구 선택을 표시한다.
+7. `클라우드 백업 완료`의 건수와 시간을 확인하고, 백업 이력에서 JSON을 내려받아 기존 JSON의 전체 기록과 대조한다. 로그인이나 테이블 생성만으로 실제 기록 백업이 완료된 것은 아니다.
+
+## 저장과 복원
+
+- 저장·수정·삭제한 기록은 먼저 기존 브라우저 저장과 JSON 백업 경로로 처리된다. 로그인 상태에서는 유효한 변경마다 별도 클라우드 버전을 추가한다.
+- 오프라인 변경은 계정별 localStorage 전송 대기열에 순서대로 남는다. 앱을 다시 열거나 네트워크가 돌아오면 재시도하며, 실패 중에는 약 30초마다 재시도한다. 네트워크 요청 제한 시간은 15초다.
+- 이미 전송된 요청은 동일 ID로 재시도해 중복 이력을 만들지 않는다. 요청 중 생긴 변경은 다음 버전으로 전송한다.
+- 빈 새 브라우저가 클라우드를 빈 데이터로 자동 교체하지 않는다. 다른 탭·기기가 최신 버전을 바꾸면 예상 버전 검사로 전송을 중단한다.
+- `백업 이력`은 최근 50개를 표시한다. 이전 버전도 DB에는 남으며 자동 삭제하지 않는다. 과거 버전 복원은 현재 기록을 새 버전으로 저장한다.
+- 복원 전에 기존 로컬 기록과 미전송 이력을 JSON으로 다운로드한다. 미전송 이력 파일은 여러 BackupV1의 배열이며, 필요한 원소를 별도 JSON으로 저장하면 기존 복원 기능을 사용할 수 있다.
+- 연결 해제는 이 앱의 로그인 세션만 해제한다. 기존 클라우드 버전은 삭제하지 않는다. 로그인 전·연결 해제 중에 한 변경은 다음 로그인 시 비교 후 백업하므로 그 기간의 매 변경 버전을 클라우드에 남기지는 않는다.
+
+## DB와 접근 권한
+
+- `public.draft_pattern_backup_snapshots`: 계정별 전체 JSON, 서버 저장 시각, 이전 버전 ID, 기록 건수.
+- `public.draft_pattern_backup_heads`: 계정별 최신 버전 참조.
+- 두 테이블 모두 RLS를 사용한다. 로그인 계정은 자기 기록만 조회하며 직접 INSERT/UPDATE/DELETE할 수 없다.
+- `draft_pattern_save_backup`만 로그인·소유권·예상 최신 버전·요청 ID를 검사하고 한 트랜잭션에서 백업과 최신 참조를 저장한다. 익명 방문자·익명 로그인은 호출할 수 없다. payload 상한은 5 MiB다.
+- 쓰기 권한을 저장 함수로 제한하므로 해당 함수의 `SECURITY DEFINER`는 의도적이다. `search_path=''`, 로그인 확인, 요청 소유자 서버 결정, 브라우저·PUBLIC/anon 실행 권한 회수를 적용했다. Supabase advisor의 [로그인 사용자 definer 실행 경고](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable)는 이 설계에 해당한다. 공개 테이블 쓰기나 익명 실행 권한을 추가해 해결하지 않는다.
+- 새 참조 인덱스의 unused-index 정보는 아직 실제 백업이 없는 초기 상태에서 발생할 수 있다.
+- Supabase 프로젝트나 인증 계정 삭제 시 클라우드 기록도 소실될 수 있으므로 폴더 JSON을 계속 유지한다.
+
+## 검증
+
+`npm test`, `npm run build`, `npm run test:browser`를 사용한다. 스키마 테스트는 PGlite 격리 DB에서 운영 마이그레이션을 순서대로 재생하고 소유권·익명 차단·불변 이력·충돌·멱등성을 확인한다. Chrome 클라우드 테스트는 모의 인증·모의 API를 사용하며 실제 개인 데이터를 읽거나 변경하지 않는다. 운영 DB 권한 검증은 트랜잭션을 전부 롤백한다. 실제 Google 로그인과 J님의 초기 데이터 업로드는 별도로 확인해야 한다.

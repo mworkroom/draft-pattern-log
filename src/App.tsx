@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import {
   ChartNoAxesCombined, ClipboardList, Download, FileJson, House, Save, ShieldCheck, Upload,
 } from 'lucide-react'
@@ -18,6 +18,8 @@ type FileBackupState = {
   folderName?: string
   file?: BackupV1
 }
+
+const CloudBackupPanel = lazy(() => import('./CloudBackupPanel'))
 
 function sameRecords(left: ReviewRecordV1[], right: ReviewRecordV1[]): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
@@ -360,6 +362,34 @@ export default function App() {
     container.scrollTo({ top: element.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 14, behavior: 'smooth' })
   }
 
+  const restoreCloudBackup = async (backup: BackupV1): Promise<boolean> => {
+    if (fileBackup.kind === 'conflict') return false
+    try {
+      if (storageError) {
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (raw) downloadText('sop-score-tracker-damaged-before-restore-' + Date.now() + '.json', raw, 'application/json')
+      }
+      if (folderRef.current && fileBackup.kind === 'ready' && recordsRef.current.length) {
+        await backupQueueRef.current
+        await writeSafetyBackup(folderRef.current, recordsRef.current, 'before-restore')
+      }
+      localReviewRepository.save(backup.records)
+      recordsRef.current = backup.records
+      setRecords(backup.records)
+      setStorageError('')
+      setBackupAt(null)
+      queueFileBackup(backup.records)
+      setEditingId(null)
+      setDraft(blankDraft())
+      setFormError('')
+      setNotice(`클라우드 백업에서 ${backup.records.length}건을 복구했습니다.`)
+      return true
+    } catch (error) {
+      setFormError(`클라우드 복구 실패: ${errorMessage(error)}`)
+      return false
+    }
+  }
+
   return <div className="app-shell">
     <header className="app-header">
       <div className="brand"><div className="brand-mark"><ClipboardList size={27} strokeWidth={2.2}/></div><div><h1>SOP Score Tracker</h1><p>Track review quality and rework patterns</p></div></div>
@@ -394,6 +424,9 @@ export default function App() {
       </div> : null}
       {fileBackup.kind === 'ready' ? <button className="text-button" type="button" onClick={() => void chooseFolder()}>폴더 변경</button> : null}
     </div>
+    <Suspense fallback={<div className="cloud-strip"><div className="cloud-copy"><strong>클라우드 백업</strong><span>연결 기능을 불러오는 중입니다.</span></div></div>}>
+      <CloudBackupPanel records={records} writable={!storageError && !['checking', 'conflict'].includes(fileBackup.kind)} restoreAllowed={!['checking', 'conflict'].includes(fileBackup.kind)} onRestore={restoreCloudBackup}/>
+    </Suspense>
     {storageError ? <div className="storage-alert" role="alert">{storageError}</div> : null}
     {notice ? <div className="toast" role="status"><Save size={15}/>{notice}</div> : null}
     <main className="workspace">

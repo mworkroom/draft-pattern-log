@@ -274,6 +274,21 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .backup-strip > .text-button { margin-left: auto; }
 .backup-strip .tool-button { font-size: 14px; padding: 0 12px; white-space: nowrap; }
 .backup-strip .text-button { font-size: 14px; }
+.cloud-strip { flex: none; padding: 9px 20px; border-bottom: 1px solid #d8e4f2; background: #f4f9ff; color: #28486f; }
+.cloud-strip.ready { background: #f1fbf7; color: #236747; }
+.cloud-strip.error, .cloud-strip.conflict { background: #fff4f5; color: #933747; }
+.cloud-summary, .cloud-copy, .cloud-actions, .cloud-history { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-width: 0; }
+.cloud-copy { flex: 1 1 360px; }
+.cloud-copy strong { font-size: 14px; white-space: nowrap; }
+.cloud-copy > span { font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.cloud-actions { margin-left: auto; }
+.cloud-strip .tool-button, .cloud-strip .text-button { font-size: 14px; min-height: 36px; height: auto; padding: 7px 12px; }
+.cloud-strip button:disabled { opacity: .55; cursor: default; }
+.cloud-account, .cloud-history > span { display: block; font-size: 13px; line-height: 1.45; margin-top: 4px; overflow-wrap: anywhere; }
+.cloud-error { font-size: 14px; margin: 7px 0 0; overflow-wrap: anywhere; }
+.cloud-history { padding-top: 10px; font-size: 14px; }
+.cloud-history label { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.cloud-history select { max-width: 100%; min-height: 38px; padding: 6px 9px; border: 1px solid #cbd8e9; border-radius: 6px; color: #172743; background: #fff; font-size: 14px; }
 @media (max-width: 1100px) {
   .backup-strip { flex-wrap: wrap; padding: 10px 14px; }
   .backup-strip-actions { margin-left: 0; justify-content: flex-start; }

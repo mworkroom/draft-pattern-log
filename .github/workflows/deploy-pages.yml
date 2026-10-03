@@ -22,7 +22,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm run build
+      - run: |
+          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
+          npm run build
+        env:
+          VITE_SUPABASE_URL: https://ddlwainwollvpaeccpty.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

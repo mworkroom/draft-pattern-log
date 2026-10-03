@@ -9,6 +9,7 @@ test-results/
 !*.example
 backups/
 exports/
+supabase/.temp/
 *.backup.json
 *.export.csv
 README.md
