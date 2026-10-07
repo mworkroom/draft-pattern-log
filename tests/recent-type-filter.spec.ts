@@ -77,7 +77,7 @@ for (const width of [1280, 2048]) {
     await expect(typeFilter).toBeInViewport()
     await expect(search).toBeInViewport()
     await expect(page.getByRole('button', { name: 'View all reviews' })).toBeInViewport()
-    for (const control of [typeFilter, toolbar.locator('.filter-select > span'), search]) {
+    for (const control of [typeFilter, ...await toolbar.locator('.filter-select > span').all(), search]) {
       expect(await control.evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
     }
     expect(await toolbar.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)

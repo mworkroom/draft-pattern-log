@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, blankDraft, FIELD_OPTIONS, GENRE_MISMATCH_SUBTYPES, REWORK_KEYS, REWORK_LABELS, REVISION_KEYS, REVISION_ROUNDS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
-import { EMPTY_FILTERS, filterReviews, medianTime, reworkCounts, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, typeCounts } from './analytics'
+import { CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, blankDraft, FIELD_OPTIONS, GENRE_MISMATCH_SUBTYPES, REWORK_KEYS, REWORK_LABELS, REVISION_KEYS, REVISION_ROUNDS, MBTI_OPTIONS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
+import { EMPTY_FILTERS, filterReviews, medianTime, reworkCounts, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, typeCounts, mbtiDistribution } from './analytics'
 import { backupJson, exportCsv, parseBackup } from './storage'
 
 function completeDraft() {
@@ -393,5 +393,59 @@ describe('revision rounds and stable Type 4 identity', () => {
     expect(filterReviews(records, { ...EMPTY_FILTERS, revisionRound: '2', type: 'type4' })).toEqual([records[1]])
     expect(filterReviews(records, { ...EMPTY_FILTERS, revisionRound: '2', type: 'type3' })).toEqual([])
     expect(filterReviews(records, EMPTY_FILTERS)).toEqual(records)
+  })
+})
+
+
+describe('optional eight-group MBTI classification', () => {
+  it('stores only exact groups, preserves edits and exports MBTI independently', () => {
+    expect(MBTI_OPTIONS).toEqual(['xNTJ', 'xNTP', 'xNFJ', 'xNFP', 'xSTJ', 'xSTP', 'xSFJ', 'xSFP'])
+    const draft = completeDraft()
+    expect(draft.mbti).toBe('')
+    expect(validateDraft(draft)).toBeNull()
+    const original = toRecord(draft)
+    for (const group of MBTI_OPTIONS) {
+      draft.mbti = group
+      expect(validateDraft(draft)).toBeNull()
+      const saved = toRecord(draft, original)
+      expect(saved).toMatchObject({ id: original.id, studentName: original.studentName, mbti: group })
+      expect(recordToDraft(saved).mbti).toBe(group)
+      expect(parseBackup(JSON.parse(backupJson([saved]))).records).toEqual([saved])
+    }
+    draft.mbti = ''
+    expect(toRecord(draft, original).mbti).toBe('')
+    const { mbti: _mbti, ...legacy } = original
+    const exportedAt = new Date().toISOString()
+    expect(parseBackup({ schemaVersion: 1, exportedAt, records: [legacy] }).records[0]).toEqual(original)
+    for (const mbti of ['INTJ', 'ENTJ', 'XNTJ', 'xABC', null, 1]) {
+      expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...original, mbti }] })).toThrow()
+      Object.assign(draft, { mbti })
+      expect(validateDraft(draft)).toMatch(/MBTI/)
+    }
+    const [headers, row] = exportCsv([{ ...original, mbti: 'xNTJ' }]).slice(1).split('\r\n').map(line => line.split(','))
+    expect(row[headers.indexOf('"mbti"')]).toBe('"xNTJ"')
+  })
+
+  it('counts reviews including repeated names and excludes unclassified reviews from percentages', () => {
+    const original = toRecord(completeDraft())
+    const records = [
+      { ...original, id: '1', mbti: 'xNTJ' as const, problemTypes: ['type4'] as const },
+      { ...original, id: '2', mbti: 'xNTJ' as const, revisionRound: 2 as const, problemTypes: ['type4'] as const },
+      { ...original, id: '3', mbti: 'xNFP' as const }, original,
+    ].map(record => ({ ...record, problemTypes: [...record.problemTypes] }))
+    const stats = mbtiDistribution(records)
+    expect(stats.classifiedCount).toBe(3)
+    expect(stats.groups.map(group => group.key)).toEqual([...MBTI_OPTIONS])
+    expect(stats.groups[0]).toMatchObject({ key: 'xNTJ', count: 2 })
+    expect(stats.groups[0].percent).toBeCloseTo(200 / 3)
+    expect(stats.groups[3].percent).toBeCloseTo(100 / 3)
+    expect(stats.groups[1]).toEqual({ key: 'xNTP', count: 0, percent: 0 })
+    expect(mbtiDistribution([]).groups.every(group => group.count === 0 && group.percent === 0)).toBe(true)
+    expect(mbtiDistribution([original]).classifiedCount).toBe(0)
+    expect(mbtiDistribution([original]).groups.every(group => Number.isFinite(group.percent))).toBe(true)
+    expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'xNTJ' })).toEqual(records.slice(0, 2))
+    expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: '__missing' })).toEqual([original])
+    expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'xNTJ', revisionRound: '2', type: 'type4' })).toEqual([records[1]])
+    expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'xNFP', type: 'type4' })).toEqual([])
   })
 })

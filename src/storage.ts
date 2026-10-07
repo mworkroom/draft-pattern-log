@@ -1,6 +1,6 @@
 import {
   AI_USAGE, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, ENGLISH_QUALITY, GENRE_MISMATCH_SUBTYPES, LANGUAGES, LEVELS, REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS,
-  STRUCTURE_KEYS, TIERS, TIME_OPTIONS, TYPE_KEYS, REVISION_ROUNDS,
+  STRUCTURE_KEYS, TIERS, TIME_OPTIONS, TYPE_KEYS, REVISION_ROUNDS, MBTI_OPTIONS,
   type BackupV1, type ReviewRecordV1,
 } from './model'
 
@@ -25,6 +25,7 @@ export function isReviewRecord(value: unknown): value is ReviewRecordV1 {
     isDate(value.reviewDate) && isTimestamp(value.createdAt) && isTimestamp(value.updatedAt) &&
     typeof value.studentName === 'string' && value.studentName.trim().length > 0 &&
     REVISION_ROUNDS.some(round => value.revisionRound === round) &&
+    (value.mbti === '' || isOption(value.mbti, MBTI_OPTIONS)) &&
     isOption(value.draftLanguage, LANGUAGES) &&
     isOptionalOption(value.level, LEVELS) &&
     typeof value.field === 'string' &&
@@ -52,6 +53,7 @@ function normalizeRecord(value: unknown): unknown {
   if (!isObject(value)) return value
   const missing = REVISION_KEYS.filter(key => !Object.hasOwn(value, key))
   const missingRevisionRound = !Object.hasOwn(value, 'revisionRound')
+  const missingMbti = !Object.hasOwn(value, 'mbti')
   const missingCareerStage = !Object.hasOwn(value, 'careerStage')
   const missingSector = !Object.hasOwn(value, 'sector')
   const hasBackground = Object.hasOwn(value, 'background')
@@ -69,10 +71,11 @@ function normalizeRecord(value: unknown): unknown {
     ? originalRework.filter(item => typeof item !== 'string' || !RETIRED_REWORK_KEYS.has(item))
     : null
   const removedRework = Array.isArray(originalRework) && rework !== null && rework.length !== originalRework.length
-  if (!missing.length && !missingRevisionRound && !removedRework && !missingCareerStage && !missingSector && !hasBackground && !missingGenreSubtypes) return value
+  if (!missing.length && !missingMbti && !missingRevisionRound && !removedRework && !missingCareerStage && !missingSector && !hasBackground && !missingGenreSubtypes) return value
   const { background: _legacyBackground, ...current } = value
   return {
     ...current,
+    ...(missingMbti ? { mbti: '' } : {}),
     ...(missingRevisionRound ? { revisionRound: 1 } : {}),
     ...(removedRework ? { rework } : {}),
     ...(missingCareerStage ? { careerStage } : {}),
@@ -136,13 +139,13 @@ function csvCell(value: string | number | null): string {
 
 export function exportCsv(records: ReviewRecordV1[]): string {
   const headers = [
-    'id', 'review_date', 'created_at', 'updated_at', 'student_name', 'revision_round', 'draft_language', 'level', 'field', 'career_stage', 'sector',
+    'id', 'review_date', 'created_at', 'updated_at', 'student_name', 'revision_round', 'mbti', 'draft_language', 'level', 'field', 'career_stage', 'sector',
     'school_tier', 'word_limit', 'draft_length', 'ai_usage',
     ...STRUCTURE_KEYS, 'structure_total', ...REWORK_KEYS, 'rework_total',
     ...TYPE_KEYS, ...GENRE_MISMATCH_SUBTYPES, 'unclassified_note', ...REVISION_KEYS, 'time_spent', 'surface_english_quality', 'notes',
   ]
   const rows = records.map(record => [
-    record.id, record.reviewDate, record.createdAt, record.updatedAt, record.studentName, record.revisionRound,
+    record.id, record.reviewDate, record.createdAt, record.updatedAt, record.studentName, record.revisionRound, record.mbti,
     record.draftLanguage, record.level, record.field, record.careerStage, record.sector, record.schoolTier, record.wordLimit,
     record.draftLength, record.aiUsage,
     ...STRUCTURE_KEYS.map(key => record.structure[key]),

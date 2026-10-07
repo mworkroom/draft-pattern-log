@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CloudBackupCoordinator, fingerprint, type CloudRepository, type CloudSnapshot } from './cloudBackup'
+import { CloudBackupCoordinator, fingerprint, parseSnapshot, type CloudRepository, type CloudSnapshot } from './cloudBackup'
 import { blankDraft, toRecord, type BackupV1, type ReviewRecordV1 } from './model'
 
 function record(name: string): ReviewRecordV1 {
@@ -158,5 +158,22 @@ describe('cloud backup coordination', () => {
     const h = harness([record('Initial')]); h.map.set('draft-pattern-log:cloud:v1:user', '{broken')
     const c = h.make(); await c.retry()
     expect(c.state.kind).toBe('error'); expect(h.versions).toHaveLength(0)
+  })
+})
+
+
+describe('MBTI cloud snapshot compatibility', () => {
+  it('reads old snapshots as unclassified and retains MBTI through backup versions', async () => {
+    const current = { ...record('MBTI Student'), mbti: 'xNTJ' as const }
+    const { mbti: _mbti, ...legacy } = current
+    const parsed = parseSnapshot({ id: 'legacy', created_at: new Date().toISOString(), backup: backup([legacy as ReviewRecordV1]) })
+    expect(parsed.backup.records[0].mbti).toBe('')
+    const h = harness([current]); const c = h.make(); await c.retry()
+    expect(h.versions[0].backup.records[0].mbti).toBe('xNTJ')
+    const edited = [{ ...current, mbti: 'xSFP' as const }]
+    h.local(edited); c.changed(edited); await c.retry()
+    expect(h.versions.at(-1)?.backup.records[0].mbti).toBe('xSFP')
+    expect(h.versions[0].backup.records[0].mbti).toBe('xNTJ')
+    expect(parseSnapshot({ id: 'current', created_at: new Date().toISOString(), backup: h.versions.at(-1)?.backup }).backup.records).toEqual(edited)
   })
 })

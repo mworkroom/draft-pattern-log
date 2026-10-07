@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from 'react'
 import { CircleHelp, RotateCcw } from 'lucide-react'
 import {
   AI_USAGE, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, ENGLISH_QUALITY, FIELD_OPTIONS, GENRE_MISMATCH_HELP, GENRE_MISMATCH_LABELS, GENRE_MISMATCH_SUBTYPES, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS,
-  REVISION_HELP, REVISION_KEYS, REVISION_LABELS, REVISION_LEVELS, REVISION_ROUNDS,
+  REVISION_HELP, REVISION_KEYS, REVISION_LABELS, REVISION_LEVELS, REVISION_ROUNDS, MBTI_OPTIONS,
   STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS, TIME_OPTIONS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS,
   structureTotal, type GenreMismatchSubtype, type ReviewDraft, type ReviewRecordV1, type ReworkKey, type StructureKey, type TypeKey,
 } from './model'
@@ -61,6 +61,13 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
         <input ref={nameRef} id="student-name" autoComplete="off" placeholder="Student name" value={draft.studentName} onChange={event => update('studentName', event.target.value)} />
       </div>
       <div className="field-block"><label>Revision Round</label><Segmented options={REVISION_ROUNDS} value={draft.revisionRound} label="Revision Round" onChange={value => update('revisionRound', value)} /></div>
+      </div>
+
+      <div className="form-grid two mbti-row">
+        <div className="field-block"><label htmlFor="mbti">MBTI</label><select id="mbti" value={draft.mbti} onChange={event => update('mbti', event.target.value as ReviewDraft['mbti'])}>
+          <option value="">Not specified</option>
+          {MBTI_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+        </select></div>
       </div>
 
       <div className="form-grid two">

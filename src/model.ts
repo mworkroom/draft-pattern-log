@@ -22,6 +22,7 @@ export const GENRE_MISMATCH_SUBTYPES = ['researchProposal', 'promptResponse'] as
 export const REVISION_KEYS = ['revision_experience_closing', 'revision_academic_plan', 'revision_conclusion'] as const
 export const REVISION_LEVELS = ['none', 'refine', 'rebuild'] as const
 export const REVISION_ROUNDS = [1, 2, 3] as const
+export const MBTI_OPTIONS = ['xNTJ', 'xNTP', 'xNFJ', 'xNFP', 'xSTJ', 'xSTP', 'xSFJ', 'xSFP'] as const
 export const TIME_OPTIONS = ['20m', '30m', '45m', '60m', '90m', '120m+'] as const
 export const LANGUAGES = ['English', 'Korean'] as const
 export const LEVELS = ["Master's", "Bachelor's", 'Other'] as const
@@ -53,6 +54,7 @@ export type GenreMismatchSubtype = typeof GENRE_MISMATCH_SUBTYPES[number]
 export type RevisionKey = typeof REVISION_KEYS[number]
 export type RevisionLevel = typeof REVISION_LEVELS[number]
 export type RevisionRound = typeof REVISION_ROUNDS[number]
+export type Mbti = typeof MBTI_OPTIONS[number] | ''
 export type TimeOption = typeof TIME_OPTIONS[number]
 export type Language = typeof LANGUAGES[number]
 export type Level = typeof LEVELS[number]
@@ -70,6 +72,7 @@ export interface ReviewRecordV1 {
   updatedAt: string
   studentName: string
   revisionRound: RevisionRound
+  mbti: Mbti
   draftLanguage: Language
   level: Level | null
   field: string
@@ -190,6 +193,7 @@ export function blankDraft(reviewDate = localToday()): ReviewDraft {
     reviewDate,
     studentName: '',
     revisionRound: 1,
+    mbti: '',
     draftLanguage: 'English',
     level: "Master's",
     field: '',
@@ -228,6 +232,7 @@ export function structureTotal(structure: StructureScores): number {
 export function validateDraft(draft: ReviewDraft): string | null {
   if (!draft.studentName.trim()) return 'Student Name을 입력해 주세요.'
   if (!REVISION_ROUNDS.includes(draft.revisionRound)) return 'Revision Round는 1, 2, 3 중에서 선택해 주세요.'
+  if (draft.mbti !== '' && !MBTI_OPTIONS.includes(draft.mbti)) return 'MBTI 분류 값을 확인해 주세요.'
   if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.reviewDate) || Number.isNaN(Date.parse(draft.reviewDate))) return '유효한 Review Date를 선택해 주세요.'
   if (!STRUCTURE_KEYS.every(key => draft.structure[key] !== null)) return 'Structure Score 8개를 모두 선택해 주세요.'
   if (draft.problemTypes.includes('type6') && !draft.genreMismatchSubtypes.length) return 'Type 6의 하위 유형을 하나 이상 선택해 주세요.'
@@ -248,6 +253,7 @@ export function toRecord(draft: ReviewDraft, original?: ReviewRecordV1): ReviewR
     reviewDate: draft.reviewDate,
     studentName: draft.studentName.trim(),
     revisionRound: draft.revisionRound,
+    mbti: draft.mbti,
     draftLanguage: draft.draftLanguage,
     level: draft.level,
     field: draft.field.trim(),

@@ -1,0 +1,98 @@
+import { expect, test } from '@playwright/test'
+import { blankDraft, MBTI_OPTIONS, STRUCTURE_KEYS, toRecord, type ReviewDraft } from '../src/model'
+
+const structure = Object.fromEntries(STRUCTURE_KEYS.map(key => [key, 1])) as ReviewDraft['structure']
+const classified = MBTI_OPTIONS.map(mbti => toRecord({
+  ...blankDraft(mbti === 'xNTJ' ? '2026-09-01' : '2026-10-08'), structure, mbti,
+  studentName: mbti === 'xNTJ' ? 'MBTI Repeat' : `MBTI ${mbti}`, problemTypes: ['type4'],
+}))
+const repeat = toRecord({ ...blankDraft('2026-10-08'), structure, studentName: 'MBTI Repeat', revisionRound: 2, mbti: 'xNTJ', problemTypes: ['type5'] })
+const { mbti: _missing, ...legacy } = toRecord({ ...blankDraft('2026-10-08'), structure, studentName: 'MBTI Legacy' })
+
+for (const width of [1280, 2048]) {
+  test(`MBTI storage, classified denominator and synchronized filters at ${width}px`, async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+    await page.setViewportSize({ width, height: width === 1280 ? 900 : 1152 })
+    await page.goto('./')
+    await expect(page).toHaveTitle('SOP Score Tracker')
+    const input = page.locator('#mbti')
+    await expect(input).toHaveValue('')
+    await expect(input.locator('option')).toHaveText(['Not specified', ...MBTI_OPTIONS])
+    const distribution = page.getByRole('region', { name: 'MBTI Distribution', exact: true })
+    await expect(distribution.locator('.mbti-stat')).toHaveCount(8)
+    await expect(distribution.locator('.mbti-stat small')).toHaveText(Array(8).fill('0%'))
+    await page.evaluate(value => localStorage.setItem('sop-score-tracker:records:v1', value), JSON.stringify({
+      schemaVersion: 1, exportedAt: new Date().toISOString(), records: [...classified, repeat, legacy],
+    }))
+    await page.reload()
+    await expect(page.locator('.storage-alert')).toHaveCount(0)
+    await expect(distribution.locator('.card-head span')).toHaveText('9 classified reviews')
+    const group = (key: string) => distribution.locator('.mbti-stat').filter({ has: page.getByText(key, { exact: true }) })
+    await expect(group('xNTJ').locator('span')).toHaveText('2 reviews')
+    await expect(group('xNTJ').locator('small')).toHaveText('22.2%')
+    for (const key of MBTI_OPTIONS.slice(1)) {
+      await expect(group(key).locator('span')).toHaveText('1 review')
+      await expect(group(key).locator('small')).toHaveText('11.1%')
+    }
+    const toolbar = page.locator('.recent-toolbar')
+    const mbtiFilter = toolbar.getByRole('combobox', { name: 'MBTI', exact: true })
+    const typeFilter = toolbar.getByRole('combobox', { name: 'Problem Type', exact: true })
+    await expect(mbtiFilter.locator('option')).toHaveText(['All groups', ...MBTI_OPTIONS, 'Not specified'])
+    await mbtiFilter.selectOption('xNTJ')
+    await expect(page.locator('.reviews-table .student-link')).toHaveText(['MBTI Repeat', 'MBTI Repeat'])
+    const total = page.locator('.kpi-card').filter({ hasText: 'Total Reviews' }).locator('strong')
+    await expect(total).toHaveText('2')
+    await expect(group('xNTJ').locator('small')).toHaveText('100%')
+    await typeFilter.selectOption('type4')
+    await expect(total).toHaveText('1')
+    await expect(page.locator('.reviews-table .student-link')).toHaveCount(1)
+    await typeFilter.selectOption('')
+    await page.locator('.filter-button').click()
+    const globalMbti = page.locator('.filters-panel').getByRole('combobox', { name: 'MBTI', exact: true })
+    await expect(globalMbti).toHaveValue('xNTJ')
+    await globalMbti.selectOption('__missing')
+    await expect(mbtiFilter).toHaveValue('__missing')
+    await expect(total).toHaveText('1')
+    await expect(distribution.locator('.card-head span')).toHaveText('0 classified reviews')
+    await page.getByRole('button', { name: 'Clear all', exact: true }).click()
+    await expect(mbtiFilter).toHaveValue('')
+    await expect(typeFilter).toHaveValue('')
+    await expect(total).toHaveText('10')
+    await page.locator('.filter-button').click()
+    await mbtiFilter.selectOption('xNTJ')
+    await page.locator('.reviews-table tbody tr').filter({ hasText: '2차' }).getByRole('button', { name: 'MBTI Repeat', exact: true }).click()
+    await expect(input).toHaveValue('xNTJ')
+    await input.selectOption('xSFP')
+    await page.getByRole('button', { name: 'Update Review', exact: true }).click()
+    await expect(total).toHaveText('1')
+    await page.reload()
+    await mbtiFilter.selectOption('xSFP')
+    await expect(total).toHaveText('2')
+    const repeatRow = page.locator('.reviews-table tbody tr').filter({ hasText: 'MBTI Repeat' })
+    await repeatRow.getByRole('button', { name: 'MBTI Repeat', exact: true }).click()
+    await expect(input).toHaveValue('xSFP')
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('sop-score-tracker:records:v1')!).records)
+    expect(stored.find((record: { id: string }) => record.id === repeat.id).mbti).toBe('xSFP')
+    expect(stored.find((record: { studentName: string }) => record.studentName === 'MBTI Legacy').mbti).toBe('')
+    await mbtiFilter.selectOption('')
+    await expect(group('xSFP').locator('span')).toHaveText('2 reviews')
+    await expect(group('xSFP').locator('small')).toHaveText('22.2%')
+    await distribution.scrollIntoViewIfNeeded()
+    expect(await toolbar.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+    for (const control of [input, mbtiFilter]) {
+      expect(await control.evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
+    }
+    expect(await distribution.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await expect(page.getByRole('button', { name: 'Update Review', exact: true })).toBeInViewport()
+    await expect(page.locator('vite-error-overlay')).toHaveCount(0)
+    expect(errors).toEqual([])
+    if (process.env.MBTI_QA_DIR) await page.screenshot({ path: `${process.env.MBTI_QA_DIR}/mbti-${width}.png` })
+    await input.selectOption('')
+    await page.getByRole('button', { name: 'Update Review', exact: true }).click()
+    await mbtiFilter.selectOption('__missing')
+    await expect(total).toHaveText('2')
+  })
+}

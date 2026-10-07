@@ -1,5 +1,5 @@
 import {
-  REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS, STRUCTURE_KEYS, TIME_OPTIONS, TYPE_KEYS,
+  REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS, STRUCTURE_KEYS, TIME_OPTIONS, TYPE_KEYS, MBTI_OPTIONS,
   type ReviewRecordV1, type RevisionKey, type StructureKey, type TypeKey,
 } from './model'
 
@@ -12,12 +12,13 @@ export interface Filters {
   careerStage: string
   sector: string
   revisionRound: string
+  mbti: string
   tier: string
   type: string
 }
 
 export const EMPTY_FILTERS: Filters = {
-  from: '', to: '', language: '', level: '', field: '', careerStage: '', sector: '', revisionRound: '', tier: '', type: '',
+  from: '', to: '', language: '', level: '', field: '', careerStage: '', sector: '', revisionRound: '', mbti: '', tier: '', type: '',
 }
 
 export function filterReviews(records: ReviewRecordV1[], filters: Filters): ReviewRecordV1[] {
@@ -30,6 +31,7 @@ export function filterReviews(records: ReviewRecordV1[], filters: Filters): Revi
     (!filters.careerStage || (record.careerStage || '__missing') === filters.careerStage) &&
     (!filters.sector || (record.sector || '__missing') === filters.sector) &&
     (!filters.revisionRound || record.revisionRound === Number(filters.revisionRound)) &&
+    (!filters.mbti || (record.mbti || '__missing') === filters.mbti) &&
     (!filters.tier || (record.schoolTier ?? '__missing') === filters.tier) &&
     (!filters.type || record.problemTypes.includes(filters.type as TypeKey)),
   )
@@ -40,6 +42,17 @@ export function median(values: number[]): number | null {
   const sorted = [...values].sort((a, b) => a - b)
   const middle = Math.floor(sorted.length / 2)
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+}
+
+export function mbtiDistribution(records: ReviewRecordV1[]) {
+  const classified = records.filter(record => record.mbti !== '')
+  return {
+    classifiedCount: classified.length,
+    groups: MBTI_OPTIONS.map(key => {
+      const count = classified.filter(record => record.mbti === key).length
+      return { key, count, percent: classified.length ? count / classified.length * 100 : 0 }
+    }),
+  }
 }
 
 export function medianTime(records: ReviewRecordV1[]): string {

@@ -6,11 +6,11 @@ import {
 import {
   averageStructure, EMPTY_FILTERS, filterReviews, formatMedian, groupLanguage, medianTime,
   reworkCounts, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, sortRecent, type Filters,
-  typeCounts,
+  typeCounts, mbtiDistribution,
 } from './analytics'
 import {
   CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS, REVISION_LABELS, REVISION_LEVELS, REVISION_ROUNDS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
-  TYPE_KEYS, TYPE_LABELS, type ReviewRecordV1,
+  TYPE_KEYS, TYPE_LABELS, MBTI_OPTIONS, type ReviewRecordV1,
 } from './model'
 
 type Tab = 'comparison' | 'structure' | 'patterns'
@@ -79,6 +79,7 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
   const conclusionEn = revisionRebuildPercent(english, 'revision_conclusion')
   const topIssues = reworkCounts(filtered).filter(issue => issue.count > 0).slice(0, 4)
   const unclassified = sortRecent(filtered.filter(record => record.problemTypes.includes('unclassified')))
+  const mbtiStats = useMemo(() => mbtiDistribution(filtered), [filtered])
 
   return <section className="dashboard-panel" aria-label="Dashboard">
     <div className="dashboard-scroll">
@@ -98,6 +99,7 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
           <SelectFilter label="Sector" value={filters.sector} onChange={value => updateFilter('sector', value)} options={[{ value: '__missing', label: 'Not specified' }, ...SECTOR_OPTIONS.map(value => ({ value, label: value }))]} />
           <SelectFilter label="School Tier" value={filters.tier} onChange={value => updateFilter('tier', value)} options={[...TIERS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} />
           <SelectFilter label="Revision Round" value={filters.revisionRound} onChange={value => updateFilter('revisionRound', value)} options={REVISION_ROUNDS.map(value => ({ value: String(value), label: String(value) }))} />
+          <SelectFilter label="MBTI" value={filters.mbti} onChange={value => updateFilter('mbti', value)} options={[...MBTI_OPTIONS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} />
           <SelectFilter label="Problem Type" value={filters.type} onChange={value => updateFilter('type', value)} options={TYPE_KEYS.map(value => ({ value, label: TYPE_LABELS[value] }))} />
         </div>
       </div> : null}
@@ -147,12 +149,21 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
         </div>
       </div> : null}
 
+      <section className="analysis-card mbti-distribution" aria-label="MBTI Distribution">
+        <div className="card-head"><h4>MBTI Distribution</h4><span>{mbtiStats.classifiedCount} classified {mbtiStats.classifiedCount === 1 ? 'review' : 'reviews'}</span></div>
+        <div className="mbti-grid">{mbtiStats.groups.map(({ key, count, percent }) => <div className="mbti-stat" key={key}>
+          <strong>{key}</strong><span>{count} {count === 1 ? 'review' : 'reviews'}</span><small>{Number(percent.toFixed(1))}%</small>
+        </div>)}</div>
+        <p className="mbti-note">Each revision round counts as a review. Percentages exclude reviews with no MBTI classification.</p>
+      </section>
+
       <div className="recent-head"><div><h3>Recent Reviews</h3><p>{filtered.length} {filtered.length === 1 ? 'review' : 'reviews'} in current filters</p></div><button type="button" className="text-button" onClick={() => setShowAll(value => !value)}>{showAll ? 'Show fewer' : 'View all reviews'} <ArrowRight size={15}/></button></div>
       <div className="recent-toolbar">
         <SelectFilter label="Problem Type" allLabel="All types" value={filters.type} onChange={value => updateFilter('type', value)} options={TYPE_KEYS.map(value => ({ value, label: TYPE_LABELS[value] }))} />
+        <div className="recent-mbti-filter"><SelectFilter label="MBTI" allLabel="All groups" value={filters.mbti} onChange={value => updateFilter('mbti', value)} options={[...MBTI_OPTIONS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} /></div>
         <label className="table-search"><Search size={17}/><input aria-label="Search recent reviews" placeholder="Search name or field" value={search} onChange={event => setSearch(event.target.value)} /></label>
       </div>
-      <p className="recent-filter-note">Problem Type filters both dashboard metrics and reviews. Showing {visibleRows.length} of {tableRows.length} matching reviews.</p>
+      <p className="recent-filter-note">Problem Type and MBTI filter both dashboard metrics and reviews. Showing {visibleRows.length} of {tableRows.length} matching reviews.</p>
       <div className="table-wrap"><table className="reviews-table"><thead><tr><th>Date</th><th>Student</th><th>Lang</th><th>Level</th><th>Field</th><th>Structure</th><th>Rework</th><th>Type</th><th>Time</th><th aria-label="Actions"/></tr></thead><tbody>
         {visibleRows.map(record => <tr key={record.id}><td>{record.reviewDate}</td><td><div className="student-name-cell"><button className="student-link" type="button" onClick={() => onEdit(record)}>{record.studentName}</button><RevisionRoundBadge round={record.revisionRound} /></div></td><td><span className={'language-pill ' + (record.draftLanguage === 'Korean' ? 'korean' : 'english')}>{record.draftLanguage}</span></td><td>{record.level ?? '—'}</td><td>{record.field || '—'}</td><td>{STRUCTURE_KEYS.reduce((sum, key) => sum + record.structure[key], 0)} / 16</td><td>{record.rework.length} / {REWORK_KEYS.length}</td><td className="type-cell">{record.problemTypes.length ? record.problemTypes.map(key => key === 'unclassified' ? 'New' : key.replace('type', 'T')).join(', ') : '—'}</td><td>{record.timeSpent}</td><td><div className="row-actions"><button type="button" aria-label={'Edit ' + record.studentName} onClick={() => onEdit(record)}><Pencil size={14}/></button><button type="button" aria-label={'Delete ' + record.studentName} onClick={() => onDelete(record)}><Trash2 size={14}/></button></div></td></tr>)}
         {visibleRows.length === 0 ? <tr><td className="empty-table" colSpan={10}>{noData && records.length === 0 ? 'No reviews yet. Save the first review to start tracking.' : 'No reviews match the current filters or search.'}</td></tr> : null}

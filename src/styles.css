@@ -217,6 +217,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .recent-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; }
 .recent-toolbar .filter-select { flex: 2 1 320px; min-width: 0; font-size: 14px; }
 .recent-toolbar .filter-select select { height: 40px; }
+.recent-mbti-filter { flex: 1 1 150px; min-width: 0; }
+.mbti-distribution { margin: 16px 0; }
+.mbti-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.mbti-stat { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px 10px; padding: 10px; border: 1px solid #dce6f2; border-radius: 5px; }
+.mbti-stat strong { font-size: 14px; }
+.mbti-stat span { font-size: 14px; }
+.mbti-stat small { grid-column: 1 / -1; font-size: 13px; color: #60718e; }
+.mbti-note { margin: 9px 0 0; font-size: 13px; line-height: 1.5; color: #60718e; }
 .recent-toolbar .table-search { flex: 1 1 200px; min-width: 0; height: 40px; padding: 7px 10px; }
 .recent-toolbar .table-search svg { flex: none; }
 .recent-toolbar .table-search input { width: 100%; min-width: 0; }
@@ -237,6 +245,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 
 @media (max-width: 650px) {
+  .mbti-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .app-header { gap: 10px; }
   .brand { gap: 10px; }
   .brand h1 { font-size: 19px; }
