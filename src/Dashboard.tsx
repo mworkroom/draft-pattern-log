@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import PatternExplorer from './PatternExplorer'
 import {
   ArrowRight, BookOpenCheck, ChartNoAxesColumnIncreasing, Clock3, FileText, ListFilter,
   Pencil, Search, Trash2, Wrench,
@@ -84,7 +85,11 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
   return <section className="dashboard-panel" aria-label="Dashboard">
     <div className="dashboard-scroll">
       <div className="dashboard-intro">
-        <div><h2>Dashboard</h2><p>Key metrics and comparisons</p></div>
+        <div><h2>Dashboard</h2><p>Explore past patterns before the next review</p></div>
+      </div>
+      <PatternExplorer records={records} onEdit={onEdit} />
+      <div className="existing-analysis-heading">
+        <div><h3>Review Statistics</h3><p>Filters below apply to statistics and Recent Reviews.</p></div>
         <button className={'filter-button ' + (showFilters || activeFilters ? 'active' : '')} type="button" onClick={() => setShowFilters(!showFilters)}><ListFilter size={16} /> Filters {activeFilters ? <b>{activeFilters}</b> : null}</button>
       </div>
       {showFilters ? <div className="filters-panel">

@@ -55,19 +55,14 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
         {editing ? <button className="text-button" type="button" onClick={onCancelEdit}><RotateCcw size={15}/> Cancel</button> : null}
       </div>
 
+      <section className="form-section" aria-labelledby="review-info-heading">
+        <h3 className="form-group-heading" id="review-info-heading">Review Info</h3>
       <div className="form-grid two name-round">
       <div className="field-block">
         <label htmlFor="student-name">Student Name <span className="required">*</span></label>
         <input ref={nameRef} id="student-name" autoComplete="off" placeholder="Student name" value={draft.studentName} onChange={event => update('studentName', event.target.value)} />
       </div>
       <div className="field-block"><label>Revision Round</label><Segmented options={REVISION_ROUNDS} value={draft.revisionRound} label="Revision Round" onChange={value => update('revisionRound', value)} /></div>
-      </div>
-
-      <div className="form-grid two mbti-row">
-        <div className="field-block"><label htmlFor="mbti">MBTI</label><select id="mbti" value={draft.mbti} onChange={event => update('mbti', event.target.value as ReviewDraft['mbti'])}>
-          <option value="">Not specified</option>
-          {MBTI_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
-        </select></div>
       </div>
 
       <div className="form-grid two">
@@ -102,26 +97,19 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
         <div className="field-block"><label>AI Usage</label><Segmented options={AI_USAGE} value={draft.aiUsage} label="AI Usage" onChange={value => update('aiUsage', value)} /></div>
       </div>
 
-      <div className="form-divider" />
-      <SectionHeading aside={'Total: ' + structureTotal(draft.structure) + ' / 16'}>Structure Score <small>(0 / 1 / 2)</small></SectionHeading>
-      <p className="section-hint">0 없음·심각한 문제 · 1 상당한 수정 필요 · 2 큰 구조 수정 불필요</p>
-      <div className="form-grid score-work">
-        <div className="score-list">
-          {STRUCTURE_KEYS.map((key, index) => <div className="score-row" key={key}>
-            <span className="score-number">{index + 1}.</span>
-            <label title={STRUCTURE_LABELS[key].help}>{STRUCTURE_LABELS[key].label}<CircleHelp size={13} aria-label={STRUCTURE_LABELS[key].help} /></label>
-            <div className="score-choices" role="group" aria-label={STRUCTURE_LABELS[key].label}>
-              {([0, 1, 2] as const).map(score => <button key={score} type="button" className={draft.structure[key] === score ? 'selected' : ''} aria-pressed={draft.structure[key] === score} onClick={() => update('structure', { ...draft.structure, [key as StructureKey]: score })}>{score}</button>)}
-            </div>
-          </div>)}
-        </div>
-        <div className="choice-box">
-          <h4>Major Rework <span>(select all that apply)</span></h4>
-          <div className="check-list">{REWORK_KEYS.map(key => <label key={key} className="check-row"><input type="checkbox" checked={draft.rework.includes(key)} onChange={() => toggleRework(key)} /><span>{REWORK_LABELS[key]}</span></label>)}</div>
-        </div>
+      <div className="form-grid two">
+        <div className="field-block"><label htmlFor="review-date">Review Date <span className="required">*</span></label><input id="review-date" type="date" value={draft.reviewDate} onChange={event => update('reviewDate', event.target.value)} /></div>
+      </div>
+      </section>
+      <section className="form-section" aria-labelledby="draft-diagnosis-heading">
+        <h3 className="form-group-heading" id="draft-diagnosis-heading">Draft Diagnosis</h3>
+      <div className="form-grid two mbti-row">
+        <div className="field-block"><label htmlFor="mbti">MBTI</label><select id="mbti" value={draft.mbti} onChange={event => update('mbti', event.target.value as ReviewDraft['mbti'])}>
+          <option value="">Not specified</option>
+          {MBTI_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+        </select></div>
       </div>
 
-      <div className="form-divider" />
       <SectionHeading aside={draft.problemTypes.length + ' selected'}>Problem Types</SectionHeading>
       <div className="type-grid">{TYPE_KEYS.map(key => <label key={key} className={'type-choice ' + (draft.problemTypes.includes(key) ? 'checked' : '')} title={TYPE_HELP[key]}>
         <input type="checkbox" checked={draft.problemTypes.includes(key)} onChange={() => toggleType(key)} />
@@ -136,7 +124,29 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
       </div> : null}
       {draft.problemTypes.includes('unclassified') ? <div className="field-block pattern-note"><label htmlFor="pattern-note">New Pattern Note <span className="required">*</span></label><input id="pattern-note" placeholder="기존 유형으로 설명되지 않는 패턴을 적어주세요" value={draft.unclassifiedNote} onChange={event => update('unclassifiedNote', event.target.value)} /></div> : null}
 
-      <div className="form-divider" />
+      <SectionHeading aside={'Total: ' + structureTotal(draft.structure) + ' / 16'}>Structure Score <small>(0 / 1 / 2)</small></SectionHeading>
+      <p className="section-hint">0 없음·심각한 문제 · 1 상당한 수정 필요 · 2 큰 구조 수정 불필요</p>
+        <div className="score-list">
+          {STRUCTURE_KEYS.map((key, index) => <div className="score-row" key={key}>
+            <span className="score-number">{index + 1}.</span>
+            <label title={STRUCTURE_LABELS[key].help}>{STRUCTURE_LABELS[key].label}<CircleHelp size={13} aria-label={STRUCTURE_LABELS[key].help} /></label>
+            <div className="score-choices" role="group" aria-label={STRUCTURE_LABELS[key].label}>
+              {([0, 1, 2] as const).map(score => <button key={score} type="button" className={draft.structure[key] === score ? 'selected' : ''} aria-pressed={draft.structure[key] === score} onClick={() => update('structure', { ...draft.structure, [key as StructureKey]: score })}>{score}</button>)}
+            </div>
+          </div>)}
+        </div>
+      <div className="form-grid two">
+        <div className="field-block"><label>Surface English Quality</label>{draft.draftLanguage === 'English'
+          ? <Segmented options={ENGLISH_QUALITY} value={draft.surfaceEnglishQuality} label="Surface English Quality" onChange={value => update('surfaceEnglishQuality', value)} />
+          : <div className="disabled-field">English drafts only</div>}</div>
+      </div>
+      </section>
+      <section className="form-section" aria-labelledby="revision-outcome-heading">
+        <h3 className="form-group-heading" id="revision-outcome-heading">Revision Outcome</h3>
+        <div className="choice-box">
+          <h4>Major Rework <span>(select all that apply)</span></h4>
+          <div className="check-list">{REWORK_KEYS.map(key => <label key={key} className="check-row"><input type="checkbox" checked={draft.rework.includes(key)} onChange={() => toggleRework(key)} /><span>{REWORK_LABELS[key]}</span></label>)}</div>
+        </div>
       <SectionHeading>Revision Focus</SectionHeading>
       <p className="section-hint">각 영역을 실제로 얼마나 수정했는지 기록합니다.</p>
       <div className="revision-table-wrap"><table className="revision-table">
@@ -151,17 +161,11 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
         </tr>)}</tbody>
       </table></div>
 
-      <div className="form-divider" />
-      <div className="form-grid two">
+      <div className="form-grid">
         <div className="field-block"><label>Time Spent <span className="required">*</span></label><Segmented options={TIME_OPTIONS} value={draft.timeSpent} label="Time Spent" onChange={value => update('timeSpent', value)} /></div>
-        <div className="field-block"><label>Surface English Quality</label>{draft.draftLanguage === 'English'
-          ? <Segmented options={ENGLISH_QUALITY} value={draft.surfaceEnglishQuality} label="Surface English Quality" onChange={value => update('surfaceEnglishQuality', value)} />
-          : <div className="disabled-field">English drafts only</div>}</div>
-      </div>
-      <div className="form-grid two notes-date">
-        <div className="field-block"><label htmlFor="review-date">Review Date <span className="required">*</span></label><input id="review-date" type="date" value={draft.reviewDate} onChange={event => update('reviewDate', event.target.value)} /></div>
         <div className="field-block"><label htmlFor="short-notes">Short Notes</label><textarea id="short-notes" placeholder="e.g. Clear language, but the academic plan needs rebuilding." value={draft.notes} onChange={event => update('notes', event.target.value)} /></div>
       </div>
+      </section>
     </div>
     <div className="form-footer">
       {error ? <div className="form-error" role="alert">{error}</div> : null}

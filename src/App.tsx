@@ -4,6 +4,7 @@ import {
 } from 'lucide-react'
 import Dashboard from './Dashboard'
 import ReviewForm from './ReviewForm'
+import { focusReviewForm } from './reviewNavigation'
 import {
   hasWritePermission, pickBackupDirectory, readCurrentBackup, rememberedBackupDirectory,
   rememberBackupDirectory, requestWritePermission, SUGGESTED_BACKUP_FOLDER, supportsFolderBackup,
@@ -42,6 +43,11 @@ export default function App() {
   const [records, setRecords] = useState(initial.records)
   const [storageError, setStorageError] = useState(initial.error)
   const [draft, setDraft] = useState<ReviewDraft>(() => blankDraft())
+  const pristineDraftRef = useRef(JSON.stringify(draft))
+  const loadDraft = (value: ReviewDraft) => {
+    pristineDraftRef.current = JSON.stringify(value)
+    setDraft(value)
+  }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formError, setFormError] = useState('')
   const [notice, setNotice] = useState('')
@@ -238,18 +244,19 @@ export default function App() {
     const record = toRecord(draft, editing ?? undefined)
     const next = editing ? records.map(item => item.id === editing.id ? record : item) : [record, ...records]
     if (!persist(next)) return
-    setDraft(blankDraft(draft.reviewDate))
+    loadDraft(blankDraft(draft.reviewDate))
     setEditingId(null)
     setFormError('')
     setNotice(editing ? 'Review updated.' : 'Review saved.')
   }
 
   const editReview = (record: ReviewRecordV1) => {
+    if (JSON.stringify(draft) !== pristineDraftRef.current &&
+      !window.confirm('작성 중인 변경 사항을 버리고 이 Review를 편집할까요?')) return
     setEditingId(record.id)
-    setDraft(recordToDraft(record))
+    loadDraft(recordToDraft(record))
     setFormError('')
-    document.querySelector('.form-scroll')?.scrollTo({ top: 0, behavior: 'smooth' })
-    document.getElementById('student-name')?.focus()
+    focusReviewForm()
   }
 
   const deleteReview = (record: ReviewRecordV1) => {
@@ -258,7 +265,7 @@ export default function App() {
     if (!persist(records.filter(item => item.id !== record.id))) return
     if (editingId === record.id) {
       setEditingId(null)
-      setDraft(blankDraft(draft.reviewDate))
+      loadDraft(blankDraft(draft.reviewDate))
     }
     setNotice('Review deleted.')
   }
@@ -275,7 +282,7 @@ export default function App() {
       syncedFileRecordsRef.current = file.records
       setStorageError('')
       setEditingId(null)
-      setDraft(blankDraft())
+      loadDraft(blankDraft())
       setFormError('')
       markBackedUp(file.exportedAt)
       setBackupAt(file.exportedAt)
@@ -345,7 +352,7 @@ export default function App() {
       queueFileBackup(parsed.records)
       setStorageError('')
       setEditingId(null)
-      setDraft(blankDraft())
+      loadDraft(blankDraft())
       setFormError('')
       setNotice('JSON backup restored: ' + parsed.records.length + ' reviews.')
     } catch (error) {
@@ -360,6 +367,10 @@ export default function App() {
     const container = document.querySelector('.dashboard-scroll')
     const element = document.querySelector(target)
     if (!container || !element) return
+    if (window.matchMedia('(max-width: 1100px)').matches) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
     container.scrollTo({ top: element.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 14, behavior: 'smooth' })
   }
 
@@ -381,7 +392,7 @@ export default function App() {
       setBackupAt(null)
       queueFileBackup(backup.records)
       setEditingId(null)
-      setDraft(blankDraft())
+      loadDraft(blankDraft())
       setFormError('')
       setNotice(`클라우드 백업에서 ${backup.records.length}건을 복구했습니다.`)
       return true
@@ -437,7 +448,7 @@ export default function App() {
     {storageError ? <div className="storage-alert" role="alert">{storageError}</div> : null}
     {notice ? <div className="toast" role="status"><Save size={15}/>{notice}</div> : null}
     <main className="workspace">
-      <ReviewForm draft={draft} onChange={value => { setDraft(value); if (formError) setFormError('') }} onSave={saveReview} onCancelEdit={() => { setEditingId(null); setDraft(blankDraft(draft.reviewDate)); setFormError('') }} editing={editing} error={formError} />
+      <ReviewForm draft={draft} onChange={value => { setDraft(value); if (formError) setFormError('') }} onSave={saveReview} onCancelEdit={() => { setEditingId(null); loadDraft(blankDraft(draft.reviewDate)); setFormError('') }} editing={editing} error={formError} />
       <Dashboard records={records} onEdit={editReview} onDelete={deleteReview} />
     </main>
   </div>

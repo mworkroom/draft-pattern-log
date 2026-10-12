@@ -1,6 +1,6 @@
 import {
   REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS, STRUCTURE_KEYS, TIME_OPTIONS, TYPE_KEYS, MBTI_OPTIONS,
-  type ReviewRecordV1, type RevisionKey, type StructureKey, type TypeKey,
+  REVISION_ROUNDS, type ReviewRecordV1, type RevisionKey, type StructureKey, type TypeKey,
 } from './model'
 
 export interface Filters {
@@ -112,4 +112,31 @@ export function scoreMedian(records: ReviewRecordV1[]): number | null {
 
 export function reworkMedian(records: ReviewRecordV1[]): number | null {
   return median(records.map(record => record.rework.length))
+}
+
+/** Descriptive patterns in an already selected set; never an action recommendation. */
+export function explorePatterns(records: ReviewRecordV1[], selectedType: TypeKey | '' = '') {
+  const total = records.length
+  const withRate = <T extends { count: number }>(item: T) => ({
+    ...item, total, percent: total ? Math.round(item.count / total * 100) : 0,
+  })
+  return {
+    total,
+    types: typeCounts(records)
+      .filter(item => item.key !== selectedType && item.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3).map(withRate),
+    weakStructure: STRUCTURE_KEYS.map(key => ({
+      key, count: records.filter(record => record.structure[key] <= 1).length,
+    })).filter(item => item.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3).map(withRate),
+    rework: reworkCounts(records).filter(item => item.count > 0).slice(0, 3).map(withRate),
+    revisionFocus: revisionFocusCounts(records),
+    medianTime: medianTime(records),
+    rounds: REVISION_ROUNDS.map(round => {
+      const reviews = records.filter(record => record.revisionRound === round)
+      return { round, count: reviews.length, medianTime: reviews.length ? medianTime(reviews) : '—' }
+    }),
+  }
 }
