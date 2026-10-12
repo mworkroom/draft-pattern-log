@@ -393,3 +393,85 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .explorer-case-detail dd { margin-bottom: 8px; }
   .form-grid.name-round { grid-template-columns: 1fr; }
 }
+
+/* Three purpose-specific views share the existing panel, without resetting state. */
+.dashboard-workspace { overflow: hidden; }
+.dashboard-view { height: 100%; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.dashboard-view[hidden] { display: none; }
+.overview-view { display: flex; flex-direction: column; }
+.overview-view > .dashboard-intro, .overview-view > .filters-panel, .overview-view > .kpi-grid, .overview-view > .issue-strip { flex-shrink: 0; }
+.view-tools { display: flex; align-items: center; gap: 10px; }
+.overview-view .kpi-card { min-height: 105px; padding: 10px; position: relative; }
+.overview-view .kpi-icon { position: absolute; right: 8px; top: 10px; height: 18px; }
+.overview-view .kpi-label { padding-right: 20px; }
+.overview-view .kpi-card strong { margin: 4px 0; }
+.overview-view .issue-strip { margin: 10px 0 0; }
+.record-table-section { display: flex; flex-direction: column; min-height: 240px; min-width: 0; flex: 1; }
+.record-table-section .recent-head { flex-shrink: 0; margin: 14px 0 8px; }
+.record-table-section .recent-toolbar, .record-table-section .matching-toolbar { flex-shrink: 0; }
+.record-table-section .recent-toolbar { gap: 8px 12px; }
+.record-table-section .recent-toolbar .filter-select { flex: 2 1 240px; }
+.record-table-section .recent-mbti-filter { flex: 1 1 130px; }
+.record-table-section .table-search { margin-left: auto; }
+.record-table-section .recent-filter-note { flex-shrink: 0; margin: 7px 0; }
+.record-table-scroll { flex: 1; min-height: 150px; overflow: auto; }
+.review-records-table { min-width: 1030px; width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; table-layout: auto; }
+.review-records-table th, .review-records-table td { padding: 10px 11px; border-bottom: 1px solid #e3eaf3; border-right: 1px solid #e3eaf3; font-size: 13px; white-space: nowrap; }
+.review-records-table th { position: sticky; top: 0; z-index: 1; background: #f5f8fd; color: #435671; font-weight: 600; }
+.review-records-table tr:hover td { background: #f5f9ff; }
+.review-records-table .selected-review td { background: #eaf3ff; }
+.review-records-table .type-cell { max-width: 120px; }
+.review-records-table .row-actions button { min-width: 28px; min-height: 28px; }
+.review-fields { margin: 0; padding: 0; border: 0; min-width: 0; }
+.review-fields:disabled input, .review-fields:disabled select, .review-fields:disabled textarea { opacity: 1; color: #172743; -webkit-text-fill-color: #172743; }
+.review-fields:disabled button { cursor: default; opacity: 1; }
+.pattern-explorer { margin: 0; padding: 0; border: 0; }
+.explorer-heading h2 { font-size: 23px; margin: 0; font-weight: 700; }
+.explorer-charts-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 14px 0; }
+.explorer-chart { min-width: 0; padding: 14px; border: 1px solid #dce5f3; border-radius: 6px; }
+.explorer-chart h4 { font-size: 17px; font-weight: 600; margin: 0 0 12px; }
+.explorer-chart h5 { font-size: 14px; color: #41628d; margin: 14px 0 8px; }
+.explorer-chart p { color: #60718e; font-size: 13px; margin: 8px 0; }
+.frequency-row { margin: 11px 0; }
+.frequency-label { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 12px; font-size: 14px; }
+.frequency-label span { min-width: 0; overflow-wrap: anywhere; }
+.frequency-label strong { flex: none; font-size: 13px; }
+.frequency-track { height: 9px; border-radius: 4px; background: #edf2f8; overflow: hidden; margin-top: 6px; }
+.frequency-track > span { display: block; height: 100%; background: #347ce0; border-radius: inherit; }
+.revision-bar-row { margin: 13px 0; font-size: 14px; }
+.revision-stack { display: flex; height: 12px; border-radius: 4px; overflow: hidden; margin: 6px 0; background: #edf2f8; }
+.revision-segment.none, .legend-dot.none { background: #cad5e4; }
+.revision-segment.refine, .legend-dot.refine { background: #5797eb; }
+.revision-segment.rebuild, .legend-dot.rebuild { background: #1956a6; }
+.revision-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: #526783; }
+.revision-legend > span { display: inline-flex; gap: 5px; align-items: center; }
+.legend-dot { width: 9px; height: 9px; display: inline-block; flex: none; border-radius: 2px; }
+.explorer-charts-grid .mbti-distribution { grid-column: 1 / -1; margin: 0; }
+.mbti-bars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 20px; }
+.mbti-bars .mbti-stat { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 2px 8px; border: 0; border-radius: 0; padding: 4px 0; }
+.mbti-bars .mbti-stat small { grid-column: auto; font-size: 13px; text-align: right; }
+.mbti-bars .mbti-stat .frequency-track { grid-column: 1 / -1; }
+.explorer-view .record-table-section { min-height: 300px; }
+.explorer-view .record-table-scroll { max-height: 420px; }
+.matching-toolbar { display: flex; }
+.statistics-view .analysis-head { margin: 0 0 12px; }
+.statistics-view .analysis-head > p { font-size: 14px; color: #60718e; margin: 0; }
+@media (min-width: 1800px) {
+  .explorer-charts-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .explorer-charts-grid .mbti-distribution { grid-column: auto; }
+  .mbti-bars { grid-template-columns: 1fr; }
+}
+@media (max-width: 1100px) {
+  .dashboard-workspace { overflow: visible; }
+  .dashboard-view { height: auto; overflow: visible; }
+  .overview-view .record-table-scroll { max-height: 600px; flex: none; }
+}
+@media (max-width: 650px) {
+  .main-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; gap: 3px; }
+  .main-nav button { justify-content: center; white-space: normal; padding: 8px 4px; line-height: 1.3; }
+  .main-nav button svg { flex: none; }
+  .explorer-charts-grid, .mbti-bars { grid-template-columns: 1fr; }
+  .explorer-charts-grid .mbti-distribution { grid-column: auto; }
+  .record-table-section .recent-toolbar .filter-select, .record-table-section .recent-mbti-filter { flex-basis: 100%; }
+  .record-table-section .table-search { margin-left: 0; }
+}

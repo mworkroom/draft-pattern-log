@@ -1,23 +1,29 @@
 import { useMemo, useState } from 'react'
 import PatternExplorer from './PatternExplorer'
+import ReviewTable from './ReviewTable'
 import {
   ArrowRight, BookOpenCheck, ChartNoAxesColumnIncreasing, Clock3, FileText, ListFilter,
-  Pencil, Search, Trash2, Wrench,
+  Wrench,
 } from 'lucide-react'
 import {
   averageStructure, EMPTY_FILTERS, filterReviews, formatMedian, groupLanguage, medianTime,
   reworkCounts, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, sortRecent, type Filters,
-  typeCounts, mbtiDistribution,
+  typeCounts,
 } from './analytics'
 import {
   CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS, REVISION_LABELS, REVISION_LEVELS, REVISION_ROUNDS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
   TYPE_KEYS, TYPE_LABELS, MBTI_OPTIONS, type ReviewRecordV1,
 } from './model'
 
-type Tab = 'comparison' | 'structure' | 'patterns'
+type Tab = 'structure' | 'patterns' | 'comparison'
+export type DashboardView = 'overview' | 'explorer' | 'statistics'
 
 interface Props {
   records: ReviewRecordV1[]
+  view: DashboardView
+  selectedId: string | null
+  onSelect: (record: ReviewRecordV1) => void
+  onGoToInput: () => void
   onEdit: (record: ReviewRecordV1) => void
   onDelete: (record: ReviewRecordV1) => void
 }
@@ -53,25 +59,16 @@ function PairBars({ title, korean, english, max, suffix = '', note }: {
   </div>
 }
 
-export default function Dashboard({ records, onEdit, onDelete }: Props) {
+export default function Dashboard({ records, view, selectedId, onSelect, onGoToInput, onEdit, onDelete }: Props) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
-  const [tab, setTab] = useState<Tab>('comparison')
-  const [showAll, setShowAll] = useState(false)
-  const [search, setSearch] = useState('')
+  const [tab, setTab] = useState<Tab>('structure')
   const [showFilters, setShowFilters] = useState(false)
   const updateFilter = (key: keyof Filters, value: string) => setFilters(current => ({ ...current, [key]: value }))
-
   const filtered = useMemo(() => filterReviews(records, filters), [records, filters])
   const korean = useMemo(() => groupLanguage(filtered, 'Korean'), [filtered])
   const english = useMemo(() => groupLanguage(filtered, 'English'), [filtered])
   const fields = useMemo(() => [...new Set(records.map(record => record.field.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [records])
-  const tableRows = useMemo(() => sortRecent(filtered).filter(record =>
-    record.studentName.toLocaleLowerCase().includes(search.toLocaleLowerCase()) ||
-    record.field.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
-  ), [filtered, search])
-  const visibleRows = showAll ? tableRows : tableRows.slice(0, 5)
   const activeFilters = Object.values(filters).filter(Boolean).length
-  const noData = filtered.length === 0
   const structureMedian = scoreMedian(filtered)
   const medianRework = reworkMedian(filtered)
   const academicKr = revisionRebuildPercent(korean, 'revision_academic_plan')
@@ -80,19 +77,9 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
   const conclusionEn = revisionRebuildPercent(english, 'revision_conclusion')
   const topIssues = reworkCounts(filtered).filter(issue => issue.count > 0).slice(0, 4)
   const unclassified = sortRecent(filtered.filter(record => record.problemTypes.includes('unclassified')))
-  const mbtiStats = useMemo(() => mbtiDistribution(filtered), [filtered])
-
-  return <section className="dashboard-panel" aria-label="Dashboard">
-    <div className="dashboard-scroll">
-      <div className="dashboard-intro">
-        <div><h2>Dashboard</h2><p>Explore past patterns before the next review</p></div>
-      </div>
-      <PatternExplorer records={records} onEdit={onEdit} />
-      <div className="existing-analysis-heading">
-        <div><h3>Review Statistics</h3><p>Filters below apply to statistics and Recent Reviews.</p></div>
-        <button className={'filter-button ' + (showFilters || activeFilters ? 'active' : '')} type="button" onClick={() => setShowFilters(!showFilters)}><ListFilter size={16} /> Filters {activeFilters ? <b>{activeFilters}</b> : null}</button>
-      </div>
-      {showFilters ? <div className="filters-panel">
+  const filterButton = <button className={'filter-button ' + (showFilters || activeFilters ? 'active' : '')} type="button" onClick={() => setShowFilters(value => !value)}><ListFilter size={16}/> Filters {activeFilters ? <b>{activeFilters}</b> : null}</button>
+  const filterPanel = (
+showFilters ? <div className="filters-panel">
         <div className="filter-top"><strong>Filter reviews</strong><button type="button" className="text-button" onClick={() => setFilters(EMPTY_FILTERS)}>Clear all</button></div>
         <div className="filter-grid">
           <label className="filter-select"><span>From</span><input aria-label="From date" type="date" value={filters.from} onChange={event => updateFilter('from', event.target.value)} /></label>
@@ -107,8 +94,13 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
           <SelectFilter label="MBTI" value={filters.mbti} onChange={value => updateFilter('mbti', value)} options={[...MBTI_OPTIONS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} />
           <SelectFilter label="Problem Type" value={filters.type} onChange={value => updateFilter('type', value)} options={TYPE_KEYS.map(value => ({ value, label: TYPE_LABELS[value] }))} />
         </div>
-      </div> : null}
-
+      </div> : null
+  )
+  return <section className="dashboard-panel" aria-label="Dashboard">
+    <div className="dashboard-scroll dashboard-workspace">
+      <section className="dashboard-view overview-view" hidden={view !== 'overview'} aria-label="Review Overview">
+        <div className="dashboard-intro"><div><h2>Review Statistics</h2></div><div className="view-tools"><button type="button" className="text-button explorer-form-link" onClick={onGoToInput}>Go to input ↓</button>{filterButton}</div></div>
+        {view === 'overview' ? filterPanel : null}
       <div className="kpi-grid">
         <Kpi icon={<FileText size={18}/>} label="Total Reviews" value={String(filtered.length)} foot="in selected range" tone="tone-blue" />
         <Kpi icon={<BookOpenCheck size={18}/>} label="Korean Reviews" value={String(korean.length)} foot={filtered.length ? Math.round(korean.length / filtered.length * 100) + '% of total' : 'No data'} tone="tone-red" />
@@ -118,14 +110,23 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
         <Kpi icon={<Clock3 size={18}/>} label="Median Time" value={medianTime(filtered)} foot="selected time band" tone="tone-amber" />
       </div>
 
-      <div className="analysis-head">
-        <div><h3>Review Analysis</h3><p>Patterns across the selected reviews</p></div>
-        <div className="language-key"><span><i className="key-blue"/>Korean</span><span><i className="key-purple"/>English</span></div>
+        {topIssues.length ? <div className="issue-strip"><div><strong>Frequent Rework</strong><small>Most common rework in selected reviews</small></div><div className="issue-tags">{topIssues.map(issue => <span key={issue.key}>{REWORK_LABELS[issue.key]} <b>{issue.count}</b></span>)}</div></div> : null}
+        <ReviewTable records={filtered} title="Recent Reviews" overview selectedId={selectedId} onSelect={onSelect} onEdit={onEdit} onDelete={onDelete} toolbar={<>
+          <SelectFilter label="Problem Type" allLabel="All types" value={filters.type} onChange={value => updateFilter('type', value)} options={TYPE_KEYS.map(value => ({ value, label: TYPE_LABELS[value] }))}/>
+          <div className="recent-mbti-filter"><SelectFilter label="MBTI" allLabel="All groups" value={filters.mbti} onChange={value => updateFilter('mbti', value)} options={[...MBTI_OPTIONS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]}/></div>
+        </>}/>
+      </section>
+      <div className="dashboard-view explorer-view" hidden={view !== 'explorer'}>
+        <PatternExplorer records={records} selectedId={selectedId} onSelect={onSelect} onGoToInput={onGoToInput} onEdit={onEdit} onDelete={onDelete}/>
       </div>
+      <section className="dashboard-view statistics-view" hidden={view !== 'statistics'} aria-label="Statistics">
+        <div className="dashboard-intro"><div><h2>Review Analysis</h2></div>{filterButton}</div>
+        {view === 'statistics' ? filterPanel : null}
+      <div className="analysis-head"><p>{filtered.length} {filtered.length === 1 ? 'review' : 'reviews'} in current filters</p><div className="language-key"><span><i className="key-blue"/>Korean</span><span><i className="key-purple"/>English</span></div></div>
       <div className="tab-row" role="tablist" aria-label="Analysis">
-        <button role="tab" aria-selected={tab === 'comparison'} className={tab === 'comparison' ? 'active' : ''} onClick={() => setTab('comparison')}>Language comparison</button>
         <button role="tab" aria-selected={tab === 'structure'} className={tab === 'structure' ? 'active' : ''} onClick={() => setTab('structure')}>Structure details</button>
         <button role="tab" aria-selected={tab === 'patterns'} className={tab === 'patterns' ? 'active' : ''} onClick={() => setTab('patterns')}>Problem patterns</button>
+        <button role="tab" aria-selected={tab === 'comparison'} className={tab === 'comparison' ? 'active' : ''} onClick={() => setTab('comparison')}>Language comparison</button>
       </div>
       {tab === 'comparison' ? <div className="comparison-grid">
         <PairBars title="Structure Score (out of 16)" korean={scoreMedian(korean)} english={scoreMedian(english)} max={16} note={'n=' + korean.length + ' / n=' + english.length} />
@@ -150,30 +151,11 @@ export default function Dashboard({ records, onEdit, onDelete }: Props) {
           </table></div>
         </div>
         <div className="analysis-card unclassified-card"><div className="card-head"><h4>Unclassified / New Pattern</h4><strong>{unclassified.length} <small>of {filtered.length} ({filtered.length ? Math.round(unclassified.length / filtered.length * 100) : 0}%)</small></strong></div>
-          {unclassified.length ? unclassified.slice(0, 5).map(record => <button className="pattern-record" type="button" key={record.id} onClick={() => onEdit(record)}><span><strong>{record.studentName} <RevisionRoundBadge round={record.revisionRound} /></strong><small>{record.reviewDate}</small></span><span>{record.unclassifiedNote}</span><ArrowRight size={15}/></button>) : <p className="empty-pattern">No new patterns in this range.</p>}
+          {unclassified.length ? unclassified.slice(0, 5).map(record => <button className="pattern-record" type="button" key={record.id} onClick={() => onSelect(record)}><span><strong>{record.studentName} <RevisionRoundBadge round={record.revisionRound} /></strong><small>{record.reviewDate}</small></span><span>{record.unclassifiedNote}</span><ArrowRight size={15}/></button>) : <p className="empty-pattern">No new patterns in this range.</p>}
         </div>
       </div> : null}
 
-      <section className="analysis-card mbti-distribution" aria-label="MBTI Distribution">
-        <div className="card-head"><h4>MBTI Distribution</h4><span>{mbtiStats.classifiedCount} classified {mbtiStats.classifiedCount === 1 ? 'review' : 'reviews'}</span></div>
-        <div className="mbti-grid">{mbtiStats.groups.map(({ key, count, percent }) => <div className="mbti-stat" key={key}>
-          <strong>{key}</strong><span>{count} {count === 1 ? 'review' : 'reviews'}</span><small>{Number(percent.toFixed(1))}%</small>
-        </div>)}</div>
-        <p className="mbti-note">Each revision round counts as a review. Percentages exclude reviews with no MBTI classification.</p>
       </section>
-
-      <div className="recent-head"><div><h3>Recent Reviews</h3><p>{filtered.length} {filtered.length === 1 ? 'review' : 'reviews'} in current filters</p></div><button type="button" className="text-button" onClick={() => setShowAll(value => !value)}>{showAll ? 'Show fewer' : 'View all reviews'} <ArrowRight size={15}/></button></div>
-      <div className="recent-toolbar">
-        <SelectFilter label="Problem Type" allLabel="All types" value={filters.type} onChange={value => updateFilter('type', value)} options={TYPE_KEYS.map(value => ({ value, label: TYPE_LABELS[value] }))} />
-        <div className="recent-mbti-filter"><SelectFilter label="MBTI" allLabel="All groups" value={filters.mbti} onChange={value => updateFilter('mbti', value)} options={[...MBTI_OPTIONS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} /></div>
-        <label className="table-search"><Search size={17}/><input aria-label="Search recent reviews" placeholder="Search name or field" value={search} onChange={event => setSearch(event.target.value)} /></label>
-      </div>
-      <p className="recent-filter-note">Problem Type and MBTI filter both dashboard metrics and reviews. Showing {visibleRows.length} of {tableRows.length} matching reviews.</p>
-      <div className="table-wrap"><table className="reviews-table"><thead><tr><th>Date</th><th>Student</th><th>Lang</th><th>Level</th><th>Field</th><th>Structure</th><th>Rework</th><th>Type</th><th>Time</th><th aria-label="Actions"/></tr></thead><tbody>
-        {visibleRows.map(record => <tr key={record.id}><td>{record.reviewDate}</td><td><div className="student-name-cell"><button className="student-link" type="button" onClick={() => onEdit(record)}>{record.studentName}</button><RevisionRoundBadge round={record.revisionRound} /></div></td><td><span className={'language-pill ' + (record.draftLanguage === 'Korean' ? 'korean' : 'english')}>{record.draftLanguage}</span></td><td>{record.level ?? '—'}</td><td>{record.field || '—'}</td><td>{STRUCTURE_KEYS.reduce((sum, key) => sum + record.structure[key], 0)} / 16</td><td>{record.rework.length} / {REWORK_KEYS.length}</td><td className="type-cell">{record.problemTypes.length ? record.problemTypes.map(key => key === 'unclassified' ? 'New' : key.replace('type', 'T')).join(', ') : '—'}</td><td>{record.timeSpent}</td><td><div className="row-actions"><button type="button" aria-label={'Edit ' + record.studentName} onClick={() => onEdit(record)}><Pencil size={14}/></button><button type="button" aria-label={'Delete ' + record.studentName} onClick={() => onDelete(record)}><Trash2 size={14}/></button></div></td></tr>)}
-        {visibleRows.length === 0 ? <tr><td className="empty-table" colSpan={10}>{noData && records.length === 0 ? 'No reviews yet. Save the first review to start tracking.' : 'No reviews match the current filters or search.'}</td></tr> : null}
-      </tbody></table></div>
-      {topIssues.length ? <div className="issue-strip"><div className="issue-icon">✦</div><div><strong>Top issue trends</strong><small>Most common rework in selected reviews</small></div><div className="issue-tags">{topIssues.map(issue => <span key={issue.key}>{REWORK_LABELS[issue.key]} <b>{issue.count}</b></span>)}</div></div> : null}
     </div>
   </section>
 }

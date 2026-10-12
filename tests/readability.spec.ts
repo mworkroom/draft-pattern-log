@@ -1,3 +1,4 @@
+import { showStatistics } from './ui'
 import { expect, test } from '@playwright/test'
 
 for (const width of [1280, 2048]) {
@@ -13,7 +14,6 @@ for (const width of [1280, 2048]) {
       '.score-row label',
       '.check-row',
       '.kpi-label',
-      '.chart-title',
       '.revision-table th',
     ]) {
       const fontSize = await page.locator(selector).first().evaluate(
@@ -34,7 +34,7 @@ for (const width of [1280, 2048]) {
       expect(await page.locator(id).evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
       expect(await page.locator(id).evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
     }
-    await page.locator('.filter-button').click()
+    await page.locator('.filter-button:visible').click()
     const careerFilter = page.locator('.filters-panel').getByRole('combobox', { name: 'Career Stage', exact: true })
     await careerFilter.selectOption('Student / Fresh Graduate')
     expect(await careerFilter.evaluate(element => {
@@ -43,9 +43,9 @@ for (const width of [1280, 2048]) {
       context.font = getComputedStyle(select).font
       return select.clientWidth >= context.measureText(select.selectedOptions[0].text).width + 40
     })).toBe(true)
-    await page.locator('.filter-button').click()
+    await page.locator('.filter-button:visible').click()
     expect(await page.locator('.revision-table-wrap').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
-    await page.getByRole('tab', { name: 'Problem patterns' }).click()
+    await showStatistics(page, 'Problem patterns')
     const statsFontSize = await page.locator('.revision-stats-table td').first().evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))
     expect(statsFontSize).toBeGreaterThanOrEqual(14)
     expect(await page.locator('.revision-stats-wrap').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)

@@ -14,6 +14,9 @@ interface Props {
   onCancelEdit: () => void
   editing: ReviewRecordV1 | null
   error: string
+  viewing: ReviewRecordV1 | null
+  onCloseView: () => void
+  onEditViewed: () => void
 }
 
 function SectionHeading({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
@@ -28,7 +31,7 @@ function Segmented<T extends string | number>({ options, value, onChange, label 
   </div>
 }
 
-export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, editing, error }: Props) {
+export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, editing, error, viewing, onCloseView, onEditViewed }: Props) {
   const nameRef = useRef<HTMLInputElement>(null)
   const hasLegacyField = draft.field !== '' && !FIELD_OPTIONS.some(option => option === draft.field)
   const update = <K extends keyof ReviewDraft>(key: K, value: ReviewDraft[K]) => onChange({ ...draft, [key]: value })
@@ -51,10 +54,10 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
   return <section className="form-panel" aria-label="Review editor">
     <div className="form-scroll">
       <div className="panel-intro">
-        <div><h2>{editing ? 'Edit Review' : 'New Review'}</h2><p>{editing ? 'Update this SOP review record' : 'Enter a new SOP review record'}</p></div>
-        {editing ? <button className="text-button" type="button" onClick={onCancelEdit}><RotateCcw size={15}/> Cancel</button> : null}
+        <div><h2 id={viewing ? 'review-details-heading' : undefined} tabIndex={viewing ? -1 : undefined}>{viewing ? 'Review Details' : editing ? 'Edit Review' : 'New Review'}</h2><p>{viewing ? `${viewing.studentName} · Round ${viewing.revisionRound} · ${viewing.reviewDate}` : editing ? 'Update this SOP review record' : 'Enter a new SOP review record'}</p></div>
+        {viewing ? <button className="text-button" type="button" onClick={onCloseView}>Back to input</button> : editing ? <button className="text-button" type="button" onClick={onCancelEdit}><RotateCcw size={15}/> Cancel</button> : null}
       </div>
-
+      <fieldset className="review-fields" disabled={Boolean(viewing)}>
       <section className="form-section" aria-labelledby="review-info-heading">
         <h3 className="form-group-heading" id="review-info-heading">Review Info</h3>
       <div className="form-grid two name-round">
@@ -166,14 +169,15 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
         <div className="field-block"><label htmlFor="short-notes">Short Notes</label><textarea id="short-notes" placeholder="e.g. Clear language, but the academic plan needs rebuilding." value={draft.notes} onChange={event => update('notes', event.target.value)} /></div>
       </div>
       </section>
+      </fieldset>
     </div>
     <div className="form-footer">
-      {error ? <div className="form-error" role="alert">{error}</div> : null}
+      {!viewing && error ? <div className="form-error" role="alert">{error}</div> : null}
       <div className="footer-summary">
         <div className="summary-box blue"><span>Structure</span><strong>{structureTotal(draft.structure)} <small>/ 16</small></strong></div>
         <div className="summary-box red"><span>Rework</span><strong>{draft.rework.length} <small>/ {REWORK_KEYS.length}</small></strong></div>
         <div className="summary-box violet"><span>Problem Types</span><strong title={selectedTypes}>{selectedTypes}</strong></div>
-        <button className="primary-button" type="button" onClick={onSave}>{editing ? 'Update Review' : 'Save Review'}</button>
+        <button className="primary-button" type="button" onClick={viewing ? onEditViewed : onSave}>{viewing ? 'Edit Review' : editing ? 'Update Review' : 'Save Review'}</button>
       </div>
     </div>
   </section>

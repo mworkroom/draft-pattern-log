@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import {
   ChartNoAxesCombined, ClipboardList, Download, FileJson, House, Save, Settings, Upload,
 } from 'lucide-react'
-import Dashboard from './Dashboard'
+import Dashboard, { type DashboardView } from './Dashboard'
 import ReviewForm from './ReviewForm'
 import { focusReviewForm } from './reviewNavigation'
 import {
@@ -45,10 +45,13 @@ export default function App() {
   const [draft, setDraft] = useState<ReviewDraft>(() => blankDraft())
   const pristineDraftRef = useRef(JSON.stringify(draft))
   const loadDraft = (value: ReviewDraft) => {
+    setViewingId(null)
     pristineDraftRef.current = JSON.stringify(value)
     setDraft(value)
   }
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [viewingId, setViewingId] = useState<string | null>(null)
+  const [dashboardView, setDashboardView] = useState<DashboardView>('overview')
   const [formError, setFormError] = useState('')
   const [notice, setNotice] = useState('')
   const [backupAt, setBackupAt] = useState(() => lastBackupAt())
@@ -61,6 +64,7 @@ export default function App() {
   const backupQueueRef = useRef<Promise<void>>(Promise.resolve())
   const backupVersionRef = useRef(0)
   recordsRef.current = records
+  const viewing = records.find(record => record.id === viewingId) ?? null
   const editing = records.find(record => record.id === editingId) ?? null
   const needsBackup = records.length > 0 && (!backupAt || records.some(record => record.updatedAt > backupAt))
 
@@ -263,6 +267,7 @@ export default function App() {
     if (storageError) return
     if (!window.confirm(record.studentName + '의 ' + record.reviewDate + ' Review를 삭제할까요? 이 작업은 되돌릴 수 없습니다.')) return
     if (!persist(records.filter(item => item.id !== record.id))) return
+    if (viewingId === record.id) setViewingId(null)
     if (editingId === record.id) {
       setEditingId(null)
       loadDraft(blankDraft(draft.reviewDate))
@@ -363,15 +368,15 @@ export default function App() {
     }
   }
 
-  const goTo = (target: string) => {
-    const container = document.querySelector('.dashboard-scroll')
-    const element = document.querySelector(target)
-    if (!container || !element) return
+  const selectReview = (record: ReviewRecordV1) => {
+    setViewingId(record.id)
+    focusReviewForm('review-details-heading')
+  }
+  const switchDashboard = (view: DashboardView) => {
+    setDashboardView(view)
     if (window.matchMedia('(max-width: 1100px)').matches) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      return
+      window.requestAnimationFrame(() => document.querySelector('.dashboard-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     }
-    container.scrollTo({ top: element.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 14, behavior: 'smooth' })
   }
 
   const restoreCloudBackup = async (backup: BackupV1): Promise<boolean> => {
@@ -430,9 +435,9 @@ export default function App() {
     <header className="app-header">
       <div className="brand"><div className="brand-mark"><ClipboardList size={27} strokeWidth={2.2}/></div><div><h1>SOP Score Tracker</h1><p>Track review quality and rework patterns</p></div></div>
       <nav className="main-nav" aria-label="Main navigation">
-        <button type="button" className="active" onClick={() => goTo('.dashboard-intro')}><House size={16}/> Dashboard</button>
-        <button type="button" onClick={() => goTo('.recent-head')}><ClipboardList size={16}/> Reviews</button>
-        <button type="button" onClick={() => goTo('.analysis-head')}><ChartNoAxesCombined size={16}/> Insights</button>
+        <button type="button" aria-pressed={dashboardView === 'overview'} className={dashboardView === 'overview' ? 'active' : ''} onClick={() => switchDashboard('overview')}><House size={16}/> Review Overview</button>
+        <button type="button" aria-pressed={dashboardView === 'explorer'} className={dashboardView === 'explorer' ? 'active' : ''} onClick={() => switchDashboard('explorer')}><ClipboardList size={16}/> Pattern Explorer</button>
+        <button type="button" aria-pressed={dashboardView === 'statistics'} className={dashboardView === 'statistics' ? 'active' : ''} onClick={() => switchDashboard('statistics')}><ChartNoAxesCombined size={16}/> Statistics</button>
       </nav>
       <div className="header-tools">
         <Suspense fallback={<span className="backup-status" role="status">백업 확인 중</span>}>
@@ -448,8 +453,8 @@ export default function App() {
     {storageError ? <div className="storage-alert" role="alert">{storageError}</div> : null}
     {notice ? <div className="toast" role="status"><Save size={15}/>{notice}</div> : null}
     <main className="workspace">
-      <ReviewForm draft={draft} onChange={value => { setDraft(value); if (formError) setFormError('') }} onSave={saveReview} onCancelEdit={() => { setEditingId(null); loadDraft(blankDraft(draft.reviewDate)); setFormError('') }} editing={editing} error={formError} />
-      <Dashboard records={records} onEdit={editReview} onDelete={deleteReview} />
+      <ReviewForm draft={viewing ? recordToDraft(viewing) : draft} viewing={viewing} onCloseView={() => { setViewingId(null); focusReviewForm() }} onEditViewed={() => { if (viewing) editReview(viewing) }} onChange={value => { setDraft(value); if (formError) setFormError('') }} onSave={saveReview} onCancelEdit={() => { setEditingId(null); loadDraft(blankDraft(draft.reviewDate)); setFormError('') }} editing={editing} error={formError} />
+      <Dashboard records={records} view={dashboardView} selectedId={viewingId ?? editingId} onSelect={selectReview} onGoToInput={() => { setViewingId(null); focusReviewForm() }} onEdit={editReview} onDelete={deleteReview} />
     </main>
   </div>
 }
