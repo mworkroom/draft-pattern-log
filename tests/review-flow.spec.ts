@@ -47,7 +47,7 @@ test('revision focus saves independently and appears in filtered dashboard stati
   await page.goto('./')
   const form = page.getByRole('region', { name: 'Review editor' })
   await expect(form.locator('.check-row span')).toHaveText([
-    'Merge Paragraphs', 'Move Content', 'Compress Experience', 'Infer Hidden Logic', 'Develop Missing Examples',
+    'Merge Paragraphs', 'Move Content', 'Compress Experience', 'Infer Hidden Logic', 'Develop Missing Examples', 'Reconstruct Sentences',
   ])
   await expect(form.locator('.revision-table tbody th')).toHaveText([
     'Experience Closing', 'Academic Plan', 'Conclusion',
@@ -103,7 +103,7 @@ test('legacy localStorage reviews without revision fields load as None', async (
   await editSelectedReview(page)
   await expect(page.locator('#career-stage')).toHaveValue('')
   await expect(page.locator('#sector')).toHaveValue('')
-  await expect(page.locator('.footer-summary .summary-box.red')).toContainText('0 / 5')
+  await expect(page.locator('.footer-summary .summary-box.red')).toContainText('0 / 6')
   for (const area of ['Academic Plan', 'Conclusion', 'Experience Closing']) {
     await expect(page.getByRole('radio', { name: `${area}: none` })).toBeChecked()
   }
@@ -150,21 +150,24 @@ test('problem type rules block an empty new-pattern note', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'QA Pattern', exact: true })).toBeVisible()
 })
 
-test('missing-example rework saves, restores, and appears in dashboard trends', async ({ page }) => {
+test('missing-example and sentence rework save, restore, and appear in dashboard trends', async ({ page }) => {
   await page.goto('./')
   await page.locator('#student-name').fill('QA Missing Examples')
   for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '1' }).click()
   await page.locator('.check-row').filter({ hasText: 'Develop Missing Examples' }).click()
+  await page.locator('.check-row').filter({ hasText: 'Reconstruct Sentences' }).click()
   await page.getByRole('button', { name: 'Save Review' }).click()
-  await expect(page.getByRole('row', { name: /QA Missing Examples/ })).toContainText('1 / 5')
+  await expect(page.getByRole('row', { name: /QA Missing Examples/ })).toContainText('2 / 6')
   await page.reload()
   await page.getByRole('button', { name: 'Review Overview', exact: true }).click()
   await page.getByRole('button', { name: 'QA Missing Examples', exact: true }).click()
   await editSelectedReview(page)
   await expect(page.locator('.check-row').filter({ hasText: 'Develop Missing Examples' }).locator('input')).toBeChecked()
+  await expect(page.locator('.check-row').filter({ hasText: 'Reconstruct Sentences' }).locator('input')).toBeChecked()
   await showStatistics(page, 'Problem patterns')
   const trends = page.locator('.analysis-card').filter({ hasText: 'Major Rework Trends' })
   await expect(trends.locator('.progress-row').filter({ hasText: 'Develop Missing Examples' }).locator('strong')).toHaveText('1')
+  await expect(trends.locator('.progress-row').filter({ hasText: 'Reconstruct Sentences' }).locator('strong')).toHaveText('1')
 })
 
 test('Type 5 shares the existing card flow and appears in filtered distribution after reload', async ({ page }) => {

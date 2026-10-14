@@ -12,7 +12,7 @@ function completeDraft() {
 
 describe('review entry', () => {
   it('keeps only distinct rework actions and orders revision areas as requested', () => {
-    expect(REWORK_KEYS).toEqual(['mergeParagraphs', 'moveContent', 'compressExperience', 'inferHiddenLogic', 'developMissingExamples'])
+    expect(REWORK_KEYS).toEqual(['mergeParagraphs', 'moveContent', 'compressExperience', 'inferHiddenLogic', 'developMissingExamples', 'reconstructSentences'])
     expect(REWORK_LABELS.developMissingExamples).toBe('Develop Missing Examples')
     expect(REVISION_KEYS).toEqual(['revision_experience_closing', 'revision_academic_plan', 'revision_conclusion'])
   })
@@ -142,17 +142,21 @@ describe('analytics and backup', () => {
 
   it('saves and restores the new rework action without changing older records', () => {
     const draft = completeDraft()
-    draft.rework = ['inferHiddenLogic', 'developMissingExamples']
+    draft.rework = ['inferHiddenLogic', 'developMissingExamples', 'reconstructSentences']
     const current = toRecord(draft)
     const legacy = { ...toRecord(completeDraft()), id: 'legacy', rework: ['mergeParagraphs'] as const }
     const restored = parseBackup({ schemaVersion: 1, exportedAt: new Date().toISOString(), records: [current, legacy] }).records
-    expect(restored.map(record => record.rework)).toEqual([['inferHiddenLogic', 'developMissingExamples'], ['mergeParagraphs']])
+    expect(restored.map(record => record.rework)).toEqual([['inferHiddenLogic', 'developMissingExamples', 'reconstructSentences'], ['mergeParagraphs']])
     expect(recordToDraft(restored[0]).rework).toEqual(draft.rework)
     expect(JSON.parse(backupJson(restored)).records[0].rework).toEqual(draft.rework)
     expect(reworkCounts(restored).find(item => item.key === 'developMissingExamples')?.count).toBe(1)
     const [headers, newRow, oldRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
     const index = headers.indexOf('"developMissingExamples"')
-    expect(index).toBe(headers.indexOf('"rework_total"') - 1)
+    expect(index).toBe(headers.indexOf('"reconstructSentences"') - 1)
+    const sentenceIndex = headers.indexOf('"reconstructSentences"')
+    expect(sentenceIndex).toBe(headers.indexOf('"rework_total"') - 1)
+    expect([newRow[sentenceIndex], oldRow[sentenceIndex]]).toEqual(['"1"', '"0"'])
+    expect(reworkCounts(restored).find(item => item.key === 'reconstructSentences')?.count).toBe(1)
     expect([newRow[index], oldRow[index]]).toEqual(['"1"', '"0"'])
   })
 

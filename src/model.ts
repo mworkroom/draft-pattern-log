@@ -15,6 +15,7 @@ export const REWORK_KEYS = [
   'compressExperience',
   'inferHiddenLogic',
   'developMissingExamples',
+  'reconstructSentences',
 ] as const
 
 export const TYPE_KEYS = ['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'type7', 'unclassified'] as const
@@ -124,6 +125,7 @@ export const REWORK_LABELS: Record<ReworkKey, string> = {
   compressExperience: 'Compress Experience',
   inferHiddenLogic: 'Infer Hidden Logic',
   developMissingExamples: 'Develop Missing Examples',
+  reconstructSentences: 'Reconstruct Sentences',
 }
 
 export const TYPE_LABELS: Record<TypeKey, string> = {
