@@ -176,7 +176,7 @@ test('Type 5 shares the existing card flow and appears in filtered distribution 
   await expect(form.locator('.type-choice strong')).toHaveText([
     'Type 1 — Length + Structure', 'Type 2 — Structure', 'Type 3 — Experience / Plan',
     'Type 4 — Narrative / Indirect', 'Type 5 — Career-summary / CV-style', 'Type 6 — Genre Mismatch',
-    'Type 7 · Weak English Writing', 'Unclassified / New Pattern',
+    'Type 7 · Weak English Writing', 'Type 8 — Abstract / No Concrete Evidence', 'Unclassified / New Pattern',
   ])
   const careerType = form.locator('.type-choice').filter({ hasText: 'Type 5 — Career-summary / CV-style' })
   await expect(careerType.locator('small')).toHaveText('경력 전체를 CV처럼 요약해 구체적 사례와 학업 동기가 드러나지 않음')
@@ -259,6 +259,31 @@ test('Type 7 saves with another problem type and appears in filtered distributio
   await editSelectedReview(page)
   await expect(form.locator('.type-choice').filter({ hasText: 'Type 1 — Length + Structure' }).locator('input')).toBeChecked()
   await expect(type7.locator('input')).toBeChecked()
+})
+
+test('Type 8 saves with another problem type and appears in filtered distribution', async ({ page }) => {
+  await page.goto('./')
+  const form = page.getByRole('region', { name: 'Review editor' })
+  const type8 = form.locator('.type-choice').filter({ hasText: 'Type 8 — Abstract / No Concrete Evidence' })
+  await expect(type8.locator('small')).toHaveText('구체적인 행동, 관찰, 사례 없이 깨달음과 지원 동기만 반복')
+  await page.locator('#student-name').fill('QA Abstract Evidence')
+  for (const row of await page.locator('.score-row').all()) await row.getByRole('button', { name: '2' }).click()
+  await form.locator('.type-choice').filter({ hasText: 'Type 1 — Length + Structure' }).click()
+  await type8.click()
+  await page.getByRole('button', { name: 'Save Review' }).click()
+  await expect(page.getByRole('row', { name: /QA Abstract Evidence/ })).toContainText('T1, T8')
+  await page.reload()
+  await showStatistics(page, 'Problem patterns')
+  const distribution = page.locator('.analysis-card').filter({ hasText: 'Problem Type Distribution' })
+  await expect(distribution.locator('.progress-row').filter({ hasText: 'Type 8 — Abstract / No Concrete Evidence' }).locator('strong')).toHaveText('1')
+  await page.getByRole('button', { name: 'Filters' }).click()
+  await page.locator('.filters-panel').getByRole('combobox', { name: 'Problem Type' }).selectOption('type8')
+  await expect(page.locator('.dashboard-view:not([hidden])').getByText('1 review in current filters')).toBeVisible()
+  await page.getByRole('button', { name: 'Review Overview', exact: true }).click()
+  await page.getByRole('button', { name: 'QA Abstract Evidence', exact: true }).click()
+  await editSelectedReview(page)
+  await expect(form.locator('.type-choice').filter({ hasText: 'Type 1 — Length + Structure' }).locator('input')).toBeChecked()
+  await expect(type8.locator('input')).toBeChecked()
 })
 
 test('Career Stage and Sector save independently and filter dashboard statistics', async ({ page }) => {

@@ -18,7 +18,7 @@ export const REWORK_KEYS = [
   'reconstructSentences',
 ] as const
 
-export const TYPE_KEYS = ['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'type7', 'unclassified'] as const
+export const TYPE_KEYS = ['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'type7', 'type8', 'unclassified'] as const
 export const GENRE_MISMATCH_SUBTYPES = ['researchProposal', 'promptResponse'] as const
 export const REVISION_KEYS = ['revision_experience_closing', 'revision_academic_plan', 'revision_conclusion'] as const
 export const REVISION_LEVELS = ['none', 'refine', 'rebuild'] as const
@@ -136,6 +136,7 @@ export const TYPE_LABELS: Record<TypeKey, string> = {
   type5: 'Type 5 — Career-summary / CV-style',
   type6: 'Type 6 — Genre Mismatch',
   type7: 'Type 7 · Weak English Writing',
+  type8: 'Type 8 — Abstract / No Concrete Evidence',
   unclassified: 'Unclassified / New Pattern',
 }
 
@@ -147,6 +148,7 @@ export const TYPE_HELP: Record<TypeKey, string> = {
   type5: '경력 전체를 CV처럼 요약해 구체적 사례와 학업 동기가 드러나지 않음',
   type6: '연구계획서 또는 문항별 답변지 형식으로 작성됨',
   type7: '직접 영작하거나 AI/번역 결과를 수정하여 문법, 표현, 의미 전달이 크게 저하된 경우',
+  type8: '구체적인 행동, 관찰, 사례 없이 깨달음과 지원 동기만 반복',
   unclassified: '기존 Type으로 충분히 설명되지 않는 문제',
 }
 

@@ -70,7 +70,7 @@ describe('review entry', () => {
   })
 
   it('saves Type 5 alongside existing types in the requested order', () => {
-    expect(TYPE_KEYS).toEqual(['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'type7', 'unclassified'])
+    expect(TYPE_KEYS).toEqual(['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'type7', 'type8', 'unclassified'])
     expect(TYPE_LABELS.type5).toBe('Type 5 — Career-summary / CV-style')
     expect(TYPE_HELP.type5).toBe('경력 전체를 CV처럼 요약해 구체적 사례와 학업 동기가 드러나지 않음')
     const draft = completeDraft()
@@ -110,6 +110,18 @@ describe('review entry', () => {
     expect(validateDraft(draft)).toBeNull()
     const record = toRecord(draft)
     expect(record.problemTypes).toEqual(['type1', 'type3', 'type7'])
+    expect(record.genreMismatchSubtypes).toEqual([])
+    expect(recordToDraft(record).problemTypes).toEqual(draft.problemTypes)
+  })
+
+  it('saves Type 8 alongside other types without a subtype or structure-score rule', () => {
+    expect(TYPE_LABELS.type8).toBe('Type 8 — Abstract / No Concrete Evidence')
+    expect(TYPE_HELP.type8).toBe('구체적인 행동, 관찰, 사례 없이 깨달음과 지원 동기만 반복')
+    const draft = completeDraft()
+    draft.problemTypes = ['type1', 'type3', 'type8']
+    expect(validateDraft(draft)).toBeNull()
+    const record = toRecord(draft)
+    expect(record.problemTypes).toEqual(['type1', 'type3', 'type8'])
     expect(record.genreMismatchSubtypes).toEqual([])
     expect(recordToDraft(record).problemTypes).toEqual(draft.problemTypes)
   })
@@ -170,7 +182,7 @@ describe('analytics and backup', () => {
     expect(JSON.parse(backupJson(restored)).records[1].problemTypes).toEqual(['type3', 'type5'])
     expect(filterReviews(restored, { ...EMPTY_FILTERS, type: 'type5' }).map(record => record.studentName)).toEqual(['Career Summary'])
     expect(typeCounts(restored).map(({ key, count }) => [key, count])).toEqual([
-      ['type1', 0], ['type2', 0], ['type3', 2], ['type4', 0], ['type5', 1], ['type6', 0], ['type7', 0], ['unclassified', 0],
+      ['type1', 0], ['type2', 0], ['type3', 2], ['type4', 0], ['type5', 1], ['type6', 0], ['type7', 0], ['type8', 0], ['unclassified', 0],
     ])
     expect(typeCounts(filterReviews(restored, { ...EMPTY_FILTERS, language: 'English' })).find(item => item.key === 'type5')?.count).toBe(0)
     const [headers, oldRow, currentRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
@@ -216,6 +228,22 @@ describe('analytics and backup', () => {
     expect(typeCounts(restored).find(item => item.key === 'type7')?.count).toBe(1)
     const [headers, legacyRow, currentRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
     const index = headers.indexOf('"type7"')
+    expect(index).toBe(headers.indexOf('"type8"') - 1)
+    expect([legacyRow[index], currentRow[index]]).toEqual(['"0"', '"1"'])
+  })
+
+  it('restores, filters, counts, and exports Type 8 without changing older records', () => {
+    const legacy = create('Legacy', 'English', '60m', 1)
+    legacy.problemTypes = ['type3']
+    const current = create('Weak English', 'English', '30m', 1)
+    current.problemTypes = ['type3', 'type8']
+    const restored = parseBackup({ schemaVersion: 1, exportedAt: new Date().toISOString(), records: [legacy, current] }).records
+    expect(restored.map(record => record.problemTypes)).toEqual([['type3'], ['type3', 'type8']])
+    expect(JSON.parse(backupJson(restored)).records[1].problemTypes).toEqual(['type3', 'type8'])
+    expect(filterReviews(restored, { ...EMPTY_FILTERS, type: 'type8' })).toEqual([restored[1]])
+    expect(typeCounts(restored).find(item => item.key === 'type8')?.count).toBe(1)
+    const [headers, legacyRow, currentRow] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
+    const index = headers.indexOf('"type8"')
     expect(index).toBe(headers.indexOf('"unclassified"') - 1)
     expect([legacyRow[index], currentRow[index]]).toEqual(['"0"', '"1"'])
   })
