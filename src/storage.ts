@@ -1,5 +1,5 @@
 import {
-  AI_USAGE, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, ENGLISH_QUALITY, GENRE_MISMATCH_SUBTYPES, LANGUAGES, LEVELS, REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS,
+  AI_USAGE, APPLICATION_TYPES, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, ENGLISH_QUALITY, GENRE_MISMATCH_SUBTYPES, LANGUAGES, REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS,
   STRUCTURE_KEYS, TIERS, TIME_OPTIONS, TYPE_KEYS, REVISION_ROUNDS, MBTI_OPTIONS,
   type BackupV1, type ReviewRecordV1,
 } from './model'
@@ -27,7 +27,7 @@ export function isReviewRecord(value: unknown): value is ReviewRecordV1 {
     REVISION_ROUNDS.some(round => value.revisionRound === round) &&
     (value.mbti === '' || isOption(value.mbti, MBTI_OPTIONS)) &&
     isOption(value.draftLanguage, LANGUAGES) &&
-    isOptionalOption(value.level, LEVELS) &&
+    (value.level === 'Other' || isOptionalOption(value.level, APPLICATION_TYPES)) &&
     typeof value.field === 'string' &&
     (value.careerStage === '' || isOption(value.careerStage, CAREER_STAGE_OPTIONS)) &&
     (value.sector === '' || isOption(value.sector, SECTOR_OPTIONS)) &&

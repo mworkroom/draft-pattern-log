@@ -20,8 +20,13 @@ describe('review entry', () => {
   it('keeps the current Field choices in one list, with separate problem fields', () => {
     expect(FIELD_OPTIONS).toEqual([
       'Business', 'STEM', 'Sport', 'Development Studies', 'International Relations',
-      'Public Policy', 'Helping Professions', 'Social Sciences', 'UCAS', 'Foundation', 'Other',
+      'Public Policy', 'Helping Professions', 'Social Sciences', 'Arts & Media', 'Other',
     ])
+  })
+
+  it('restores new application types alongside existing Other reviews', () => {
+    const records = (['UCAS', 'Foundation', 'Other'] as const).map(level => toRecord({ ...completeDraft(), level }))
+    expect(parseBackup(JSON.parse(backupJson(records))).records).toEqual(records)
   })
 
   it('stores optional Career Stage and Sector independently of Field', () => {

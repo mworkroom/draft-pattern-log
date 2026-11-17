@@ -11,12 +11,13 @@ import {
   typeCounts,
 } from './analytics'
 import {
-  CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS, REVISION_LABELS, REVISION_LEVELS, REVISION_ROUNDS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
+  APPLICATION_TYPES, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, LANGUAGES, REWORK_KEYS, REWORK_LABELS, REVISION_LABELS, REVISION_LEVELS, REVISION_ROUNDS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
   TYPE_KEYS, TYPE_LABELS, MBTI_OPTIONS, type ReviewRecordV1,
 } from './model'
 
 type Tab = 'structure' | 'patterns' | 'comparison'
 export type DashboardView = 'overview' | 'explorer' | 'statistics'
+const applicationTypeOptions = [...APPLICATION_TYPES.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]
 
 interface Props {
   records: ReviewRecordV1[]
@@ -31,7 +32,7 @@ interface Props {
 function SelectFilter({ label, value, options, onChange, allLabel = 'All' }: {
   label: string; value: string; options: { value: string; label: string }[]; onChange: (value: string) => void; allLabel?: string
 }) {
-  return <label className="filter-select"><span>{label}</span><select aria-label={label} value={value} onChange={event => onChange(event.target.value)}>
+  return <label className="filter-select"><span>{label}</span><select aria-label={label} title={options.find(option => option.value === value)?.label ?? allLabel} value={value} onChange={event => onChange(event.target.value)}>
     <option value="">{allLabel}</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
   </select></label>
 }
@@ -85,7 +86,7 @@ showFilters ? <div className="filters-panel">
           <label className="filter-select"><span>From</span><input aria-label="From date" type="date" value={filters.from} onChange={event => updateFilter('from', event.target.value)} /></label>
           <label className="filter-select"><span>To</span><input aria-label="To date" type="date" value={filters.to} onChange={event => updateFilter('to', event.target.value)} /></label>
           <SelectFilter label="Language" value={filters.language} onChange={value => updateFilter('language', value)} options={LANGUAGES.map(value => ({ value, label: value }))} />
-          <SelectFilter label="Level" value={filters.level} onChange={value => updateFilter('level', value)} options={[...LEVELS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} />
+          <SelectFilter label="Application Type" value={filters.level} onChange={value => updateFilter('level', value)} options={applicationTypeOptions} />
           <SelectFilter label="Field" value={filters.field} onChange={value => updateFilter('field', value)} options={[...fields.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} />
           <SelectFilter label="Career Stage" value={filters.careerStage} onChange={value => updateFilter('careerStage', value)} options={[{ value: '__missing', label: 'Not specified' }, ...CAREER_STAGE_OPTIONS.map(value => ({ value, label: value }))]} />
           <SelectFilter label="Sector" value={filters.sector} onChange={value => updateFilter('sector', value)} options={[{ value: '__missing', label: 'Not specified' }, ...SECTOR_OPTIONS.map(value => ({ value, label: value }))]} />
@@ -112,8 +113,9 @@ showFilters ? <div className="filters-panel">
 
         {topIssues.length ? <div className="issue-strip"><div><strong>Frequent Rework</strong><small>Most common rework in selected reviews</small></div><div className="issue-tags">{topIssues.map(issue => <span key={issue.key}>{REWORK_LABELS[issue.key]} <b>{issue.count}</b></span>)}</div></div> : null}
         <ReviewTable records={filtered} title="Recent Reviews" overview selectedId={selectedId} onSelect={onSelect} onEdit={onEdit} onDelete={onDelete} toolbar={<>
+          <div className="recent-compact-filter"><SelectFilter label="Application Type" value={filters.level} onChange={value => updateFilter('level', value)} options={applicationTypeOptions}/></div>
           <SelectFilter label="Problem Type" allLabel="All types" value={filters.type} onChange={value => updateFilter('type', value)} options={TYPE_KEYS.map(value => ({ value, label: TYPE_LABELS[value] }))}/>
-          <div className="recent-mbti-filter"><SelectFilter label="MBTI" allLabel="All groups" value={filters.mbti} onChange={value => updateFilter('mbti', value)} options={[...MBTI_OPTIONS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]}/></div>
+          <div className="recent-compact-filter"><SelectFilter label="MBTI" allLabel="All groups" value={filters.mbti} onChange={value => updateFilter('mbti', value)} options={[...MBTI_OPTIONS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]}/></div>
         </>}/>
       </section>
       <div className="dashboard-view explorer-view" hidden={view !== 'explorer'}>

@@ -23,11 +23,11 @@ export default function ReviewTable({ records, title, selectedId, onSelect, onEd
   return <section className="record-table-section" aria-label={title}>
     <div className="recent-head"><div><h3>{title}</h3><p>{records.length} {records.length === 1 ? 'review' : 'reviews'} in current filters</p></div></div>
     <div className={overview ? 'recent-toolbar' : 'matching-toolbar'}>{toolbar}
-      <label className="table-search"><Search size={17}/><input aria-label={overview ? 'Search recent reviews' : 'Search matching reviews'} placeholder="Search name or field" value={search} onChange={event => setSearch(event.target.value)} /></label>
+      <label className="table-search"><Search size={17}/><input aria-label={overview ? 'Search recent reviews' : 'Search matching reviews'} placeholder="Name or field" value={search} onChange={event => setSearch(event.target.value)} /></label>
     </div>
     {search ? <p className="recent-filter-note">Showing {rows.length} of {records.length} matching reviews</p> : null}
     <div className="table-wrap record-table-scroll"><table className={'review-records-table ' + (overview ? 'reviews-table' : 'matching-reviews-table')}>
-      <thead><tr><th scope="col">Date</th><th scope="col">Student</th><th scope="col">Round</th><th scope="col">Lang</th><th scope="col">Level</th><th scope="col">Field</th><th scope="col">Structure</th><th scope="col">Rework</th><th scope="col">Type</th><th scope="col">Time</th><th scope="col">Actions</th></tr></thead>
+      <thead><tr><th scope="col">Date</th><th scope="col">Student</th><th scope="col">Round</th><th scope="col">Lang</th><th scope="col">Application Type</th><th scope="col">Field</th><th scope="col">Structure</th><th scope="col">Rework</th><th scope="col">Type</th><th scope="col">Time</th><th scope="col">Actions</th></tr></thead>
       <tbody>{rows.map(record => <tr key={record.id} className={selectedId === record.id ? 'selected-review' : undefined} aria-selected={selectedId === record.id}>
         <td>{record.reviewDate}</td><td><button className="student-link" type="button" onClick={() => onSelect(record)}>{record.studentName}</button></td>
         <td><span className="revision-round-badge">{record.revisionRound}차</span></td>

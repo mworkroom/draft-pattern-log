@@ -26,7 +26,7 @@ export const REVISION_ROUNDS = [1, 2, 3] as const
 export const MBTI_OPTIONS = ['xNTJ', 'xNTP', 'xNFJ', 'xNFP', 'xSTJ', 'xSTP', 'xSFJ', 'xSFP'] as const
 export const TIME_OPTIONS = ['20m', '30m', '45m', '60m', '90m', '120m+'] as const
 export const LANGUAGES = ['English', 'Korean'] as const
-export const LEVELS = ["Master's", "Bachelor's", 'Other'] as const
+export const APPLICATION_TYPES = ["Master's", "Bachelor's", 'UCAS', 'Foundation'] as const
 export const TIERS = ['Top', 'Mid', 'Other'] as const
 export const AI_USAGE = ['Yes', 'No', 'Unsure'] as const
 export const ENGLISH_QUALITY = ['Good', 'Average', 'Poor'] as const
@@ -40,8 +40,7 @@ export const FIELD_OPTIONS = [
   'Public Policy',
   'Helping Professions',  
   'Social Sciences',
-  'UCAS',
-  'Foundation',
+  'Arts & Media',
   'Other',
 ] as const
 // Guidance only: current students / 0–2 years, 3–5 years, and 6+ years.
@@ -58,7 +57,7 @@ export type RevisionRound = typeof REVISION_ROUNDS[number]
 export type Mbti = typeof MBTI_OPTIONS[number] | ''
 export type TimeOption = typeof TIME_OPTIONS[number]
 export type Language = typeof LANGUAGES[number]
-export type Level = typeof LEVELS[number]
+export type ApplicationType = typeof APPLICATION_TYPES[number]
 export type Tier = typeof TIERS[number]
 export type AiUsage = typeof AI_USAGE[number]
 export type EnglishQuality = typeof ENGLISH_QUALITY[number]
@@ -75,7 +74,8 @@ export interface ReviewRecordV1 {
   revisionRound: RevisionRound
   mbti: Mbti
   draftLanguage: Language
-  level: Level | null
+  // Keep the v1 backup key and accept the retired value for existing reviews.
+  level: ApplicationType | 'Other' | null
   field: string
   careerStage: CareerStage
   sector: Sector

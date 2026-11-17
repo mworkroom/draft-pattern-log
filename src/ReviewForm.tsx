@@ -1,7 +1,7 @@
 import { useRef, type ReactNode } from 'react'
 import { CircleHelp, RotateCcw } from 'lucide-react'
 import {
-  AI_USAGE, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, ENGLISH_QUALITY, FIELD_OPTIONS, GENRE_MISMATCH_HELP, GENRE_MISMATCH_LABELS, GENRE_MISMATCH_SUBTYPES, LANGUAGES, LEVELS, REWORK_KEYS, REWORK_LABELS,
+  AI_USAGE, APPLICATION_TYPES, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, ENGLISH_QUALITY, FIELD_OPTIONS, GENRE_MISMATCH_HELP, GENRE_MISMATCH_LABELS, GENRE_MISMATCH_SUBTYPES, LANGUAGES, REWORK_KEYS, REWORK_LABELS,
   REVISION_HELP, REVISION_KEYS, REVISION_LABELS, REVISION_LEVELS, REVISION_ROUNDS, MBTI_OPTIONS,
   STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS, TIME_OPTIONS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS,
   structureTotal, type GenreMismatchSubtype, type ReviewDraft, type ReviewRecordV1, type ReworkKey, type StructureKey, type TypeKey,
@@ -72,7 +72,11 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
         <div className="field-block"><label>Draft Language <span className="required">*</span></label>
           <Segmented options={LANGUAGES} value={draft.draftLanguage} label="Draft Language" onChange={value => onChange({ ...draft, draftLanguage: value, surfaceEnglishQuality: value === 'Korean' ? null : draft.surfaceEnglishQuality ?? 'Average' })} />
         </div>
-        <div className="field-block"><label>Level</label><Segmented options={LEVELS} value={draft.level} label="Level" onChange={value => update('level', value)} /></div>
+        <div className="field-block application-type">
+          <label>Application Type</label>
+          <Segmented options={APPLICATION_TYPES} value={draft.level === 'Other' ? null : draft.level} label="Application Type" onChange={value => update('level', value)} />
+          {draft.level === 'Other' ? <small className="legacy-application-type">Existing: Other</small> : null}
+        </div>
       </div>
 
       <div className="form-grid two">

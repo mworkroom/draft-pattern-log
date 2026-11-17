@@ -6,7 +6,7 @@ test('chosen defaults and review save persist after reload', async ({ page }) =>
   await expect(page.locator('#field')).toHaveValue('')
   await expect(page.locator('#field option')).toHaveText([
     'Select a field', 'Business', 'STEM', 'Sport', 'Development Studies',
-    'International Relations', 'Public Policy', 'Helping Professions', 'Social Sciences', 'UCAS', 'Foundation', 'Other',
+    'International Relations', 'Public Policy', 'Helping Professions', 'Social Sciences', 'Arts & Media', 'Other',
   ])
   await expect(page.locator('#career-stage option')).toHaveText([
     'Not specified', 'Student / Fresh Graduate', 'Early Career', 'Experienced Professional',
@@ -17,13 +17,14 @@ test('chosen defaults and review save persist after reload', async ({ page }) =>
   await expect(page.locator('#career-stage')).toHaveValue('')
   await expect(page.locator('#sector')).toHaveValue('')
   for (const [group, choice] of [
-    ['Draft Language', 'English'], ['Level', "Master's"], ['School Tier', 'Mid'],
+    ['Draft Language', 'English'], ['Application Type', "Master's"], ['School Tier', 'Mid'],
     ['AI Usage', 'Yes'], ['Time Spent', '60m'],
   ]) {
     await expect(page.getByRole('group', { name: group }).getByRole('button', { name: choice, exact: true })).toHaveAttribute('aria-pressed', 'true')
   }
 
   await page.locator('#student-name').fill('QA Student')
+  await page.getByRole('group', { name: 'Application Type' }).getByRole('button', { name: 'UCAS' }).click()
   await page.locator('#field').selectOption('Development Studies')
   for (const row of await page.locator('.score-row').all()) {
     await row.getByRole('button', { name: '1' }).click()
@@ -34,6 +35,7 @@ test('chosen defaults and review save persist after reload', async ({ page }) =>
   await page.reload()
   await expect(page.getByRole('button', { name: 'QA Student', exact: true })).toBeVisible()
   await expect(page.getByRole('row', { name: /QA Student/ })).toContainText('Development Studies')
+  await expect(page.getByRole('row', { name: /QA Student/ })).toContainText('UCAS')
   await expect(page.locator('.dashboard-view:not([hidden])').getByText('1 review in current filters')).toBeVisible()
   await page.getByRole('button', { name: 'Filters' }).click()
   const fieldFilter = page.locator('.filters-panel').getByRole('combobox', { name: 'Field' })

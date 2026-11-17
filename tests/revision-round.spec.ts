@@ -3,11 +3,15 @@ import { expect, test } from '@playwright/test'
 import { blankDraft, STRUCTURE_KEYS, toRecord, type ReviewDraft } from '../src/model'
 
 const structure = Object.fromEntries(STRUCTURE_KEYS.map(key => [key, 1])) as ReviewDraft['structure']
-const records = ([1, 2, 3] as const).map(revisionRound => toRecord({
-  ...blankDraft('2026-10-03'), studentName: '정유진', structure, revisionRound,
-  problemTypes: revisionRound === 3 ? ['type4', 'unclassified'] : ['type4'],
-  unclassifiedNote: revisionRound === 3 ? '차수별 새 패턴' : '',
-}))
+const records = ([1, 2, 3] as const).map(revisionRound => {
+  const record = toRecord({
+    ...blankDraft('2026-10-03'), studentName: '정유진', structure, revisionRound,
+    problemTypes: revisionRound === 3 ? ['type4', 'unclassified'] : ['type4'],
+    unclassifiedNote: revisionRound === 3 ? '차수별 새 패턴' : '',
+  })
+  const createdAt = new Date(Date.UTC(2026, 9, 3, revisionRound)).toISOString()
+  return { ...record, createdAt, updatedAt: createdAt }
+})
 const { revisionRound: _legacyRound, ...legacy } = records[0]
 
 for (const width of [1280, 2048]) {
@@ -80,7 +84,7 @@ for (const width of [1280, 2048]) {
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('sop-score-tracker:records:v1')!).records)
     expect(saved.map((record: { studentName: string }) => record.studentName)).toEqual(['정유진', '정유진', '정유진'])
     expect(saved.map((record: { revisionRound: number }) => record.revisionRound)).toEqual([1, 2, 2])
-    await expect(table.locator('.revision-round-badge')).toHaveText(['1차', '2차', '2차'])
+    await expect(table.locator('.revision-round-badge')).toHaveText(['2차', '2차', '1차'])
     expect(await table.locator('.revision-round-badge').first().evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(12)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     expect(errors).toEqual([])
