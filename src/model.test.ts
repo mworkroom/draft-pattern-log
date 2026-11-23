@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, blankDraft, FIELD_OPTIONS, GENRE_MISMATCH_SUBTYPES, REWORK_KEYS, REWORK_LABELS, REVISION_KEYS, REVISION_ROUNDS, MBTI_OPTIONS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
-import { EMPTY_FILTERS, filterReviews, medianTime, reworkCounts, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, typeCounts, mbtiDistribution } from './analytics'
+import { CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, blankDraft, FIELD_OPTIONS, GENRE_MISMATCH_SUBTYPES, REWORK_KEYS, REWORK_LABELS, REVISION_KEYS, REVISION_ROUNDS, MBTI_OPTIONS, NARRATIVE_SUBTYPES, TYPE_HELP, TYPE_KEYS, TYPE_LABELS, recordToDraft, toRecord, validateDraft } from './model'
+import { EMPTY_FILTERS, filterReviews, medianTime, reworkCounts, reworkMedian, revisionFocusCounts, revisionRebuildPercent, scoreMedian, typeCounts, mbtiDistribution, narrativeSubtypeCounts } from './analytics'
 import { backupJson, exportCsv, parseBackup } from './storage'
 
 function completeDraft() {
@@ -80,6 +80,7 @@ describe('review entry', () => {
     expect(TYPE_HELP.type5).toBe('경력 전체를 CV처럼 요약해 구체적 사례와 학업 동기가 드러나지 않음')
     const draft = completeDraft()
     draft.problemTypes = ['type1', 'type3', 'type4', 'type5']
+    draft.narrativeSubtypes = ['delayedPointNarrative']
     expect(validateDraft(draft)).toBeNull()
     expect(recordToDraft(toRecord(draft)).problemTypes).toEqual(draft.problemTypes)
   })
@@ -365,7 +366,7 @@ describe('analytics and backup', () => {
 describe('revision rounds and stable Type 4 identity', () => {
   it('preserves Type 4 and normalizes only missing rounds to numeric 1', () => {
     expect(TYPE_LABELS.type4).toBe('Type 4 — Narrative / Indirect')
-    expect(TYPE_HELP.type4).toBe('핵심 의미를 늦추거나 숨기고, 극적 효과를 위해 우회적으로 서술')
+    expect(TYPE_HELP.type4).toBe('핵심 내용을 직접 전달하기보다 서사적 전개나 간접적인 연결에 의존하여 단락의 역할과 논리적 흐름이 불명확해짐')
     expect(blankDraft().revisionRound).toBe(1)
     const draft = completeDraft()
     draft.problemTypes = ['type4']
@@ -397,6 +398,7 @@ describe('revision rounds and stable Type 4 identity', () => {
         const draft = completeDraft()
         draft.revisionRound = round
         draft.problemTypes = [key]
+        draft.narrativeSubtypes = key === 'type4' ? ['delayedPointNarrative'] : []
         draft.genreMismatchSubtypes = key === 'type6' ? ['researchProposal'] : []
         draft.unclassifiedNote = key === 'unclassified' ? '새 패턴' : ''
         expect(validateDraft(draft)).toBeNull()
@@ -484,5 +486,69 @@ describe('optional eight-group MBTI classification', () => {
     expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: '__missing' })).toEqual([original])
     expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'xNTJ', revisionRound: '2', type: 'type4' })).toEqual([records[1]])
     expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'xNFP', type: 'type4' })).toEqual([])
+  })
+})
+
+
+describe('Type 4 narrative subtypes', () => {
+  it('requires one or both subtypes and keeps Type 6 selections independent', () => {
+    expect(NARRATIVE_SUBTYPES).toEqual(['delayedPointNarrative', 'questionDrivenNarrative'])
+    const draft = completeDraft()
+    draft.problemTypes = ['type4']
+    expect(validateDraft(draft)).toMatch(/Type 4/)
+    for (const selected of [['delayedPointNarrative'], ['questionDrivenNarrative'], [...NARRATIVE_SUBTYPES]] as (typeof draft.narrativeSubtypes)[]) {
+      draft.narrativeSubtypes = selected
+      expect(validateDraft(draft)).toBeNull()
+      expect(recordToDraft(toRecord(draft)).narrativeSubtypes).toEqual(selected)
+    }
+    draft.problemTypes = ['type4', 'type6']
+    expect(validateDraft(draft)).toMatch(/Type 6/)
+    draft.genreMismatchSubtypes = ['researchProposal', 'promptResponse']
+    expect(validateDraft(draft)).toBeNull()
+    const saved = toRecord(draft)
+    expect(saved.genreMismatchSubtypes).toEqual(['researchProposal', 'promptResponse'])
+    draft.problemTypes = ['type6']
+    expect(toRecord(draft).narrativeSubtypes).toEqual([])
+    expect(toRecord(draft).genreMismatchSubtypes).toEqual(saved.genreMismatchSubtypes)
+  })
+
+  it('keeps historical Type 4 records unclassified, validates arrays, and exports both flags', () => {
+    const draft = completeDraft()
+    draft.problemTypes = ['type4']
+    const current = toRecord({ ...draft, narrativeSubtypes: [...NARRATIVE_SUBTYPES] })
+    const { narrativeSubtypes: _missing, ...legacy } = { ...current, id: 'legacy' }
+    const envelope = { schemaVersion: 1, exportedAt: new Date().toISOString(), records: [legacy, current] }
+    const restored = parseBackup(envelope).records
+    expect(restored[0]).toMatchObject({ problemTypes: ['type4'], narrativeSubtypes: [] })
+    expect(recordToDraft(restored[0]).narrativeSubtypes).toEqual([])
+    expect(restored[1]).toEqual(current)
+    expect(parseBackup(JSON.parse(backupJson(restored))).records).toEqual(restored)
+    for (const narrativeSubtypes of [null, 'delayedPointNarrative', ['unknown'], ['delayedPointNarrative', 'delayedPointNarrative']]) {
+      expect(() => parseBackup({ ...envelope, records: [{ ...current, narrativeSubtypes }] })).toThrow()
+    }
+    expect(() => parseBackup({ ...envelope, records: [{ ...current, problemTypes: ['type3'] }] })).toThrow()
+    const [headers, legacyRow, row] = exportCsv(restored).slice(1).split('\r\n').map(line => line.split(','))
+    for (const key of NARRATIVE_SUBTYPES) {
+      const index = headers.indexOf('"' + key + '"')
+      expect([legacyRow[index], row[index]]).toEqual(['"0"', '"1"'])
+    }
+  })
+
+  it('filters each subtype, both selections, and unspecified Type 4 records accurately', () => {
+    const base = toRecord(completeDraft())
+    const records = [
+      { ...base, id: 'both', problemTypes: ['type4'] as const, narrativeSubtypes: [...NARRATIVE_SUBTYPES] },
+      { ...base, id: 'delayed', problemTypes: ['type4'] as const, narrativeSubtypes: ['delayedPointNarrative'] as const },
+      { ...base, id: 'legacy', problemTypes: ['type4'] as const }, base,
+    ].map(record => ({ ...record, problemTypes: [...record.problemTypes], narrativeSubtypes: [...record.narrativeSubtypes] }))
+    expect(filterReviews(records, { ...EMPTY_FILTERS, narrativeSubtype: 'delayedPointNarrative' })).toEqual(records.slice(0, 2))
+    expect(filterReviews(records, { ...EMPTY_FILTERS, narrativeSubtype: 'questionDrivenNarrative', type: 'type4' })).toEqual([records[0]])
+    expect(filterReviews(records, { ...EMPTY_FILTERS, narrativeSubtype: '__missing' })).toEqual([records[2]])
+    expect(narrativeSubtypeCounts(records)).toMatchObject({ total: 3, items: [
+      { key: 'delayedPointNarrative', count: 2, percent: 67 },
+      { key: 'questionDrivenNarrative', count: 1, percent: 33 },
+      { key: '__missing', count: 1, percent: 33 },
+    ] })
+    expect(narrativeSubtypeCounts([]).items.every(item => item.count === 0 && item.percent === 0)).toBe(true)
   })
 })

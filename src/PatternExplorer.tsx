@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { EMPTY_FILTERS, explorePatterns, filterReviews, mbtiDistribution } from './analytics'
-import { MBTI_OPTIONS, REWORK_LABELS, STRUCTURE_LABELS, TYPE_KEYS, TYPE_LABELS, type Mbti, type ReviewRecordV1, type TypeKey } from './model'
-import { FrequencyBars, MbtiBars, RevisionBars } from './PatternCharts'
+import { NARRATIVE_SUBTYPES, NARRATIVE_LABELS, MBTI_OPTIONS, REWORK_LABELS, STRUCTURE_LABELS, TYPE_KEYS, TYPE_LABELS, type Mbti, type ReviewRecordV1, type TypeKey } from './model'
+import { FrequencyBars, MbtiBars, RevisionBars, NarrativeSubtypeBars } from './PatternCharts'
 import ReviewTable from './ReviewTable'
 
 interface Props {
@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function PatternExplorer({ records, selectedId, onSelect, onGoToInput, onEdit, onDelete }: Props) {
-  const [selection, setSelection] = useState<{ mbti: Mbti; type: TypeKey | '' }>({ mbti: '', type: '' })
+  const [selection, setSelection] = useState<{ mbti: Mbti; type: TypeKey | ''; narrativeSubtype: string }>({ mbti: '', type: '', narrativeSubtype: '' })
   const selected = useMemo(() => filterReviews(records, { ...EMPTY_FILTERS, ...selection }), [records, selection])
   const stats = useMemo(() => explorePatterns(selected, selection.type), [selected, selection.type])
   const mbtiStats = useMemo(() => mbtiDistribution(selected), [selected])
@@ -29,14 +29,18 @@ export default function PatternExplorer({ records, selectedId, onSelect, onGoToI
       <label className="filter-select"><span>Problem Type</span><select aria-label="Explorer Problem Type" value={selection.type} onChange={event => setSelection(current => ({ ...current, type: event.target.value as TypeKey | '' }))}>
         <option value="">All types</option>{TYPE_KEYS.map(value => <option key={value} value={value}>{TYPE_LABELS[value]}</option>)}
       </select></label>
-      <button className="text-button" type="button" onClick={() => setSelection({ mbti: '', type: '' })}>Clear</button>
+      <label className="filter-select"><span>Narrative / Indirect subtype</span><select aria-label="Explorer Narrative / Indirect subtype" value={selection.narrativeSubtype} onChange={event => setSelection(current => ({ ...current, narrativeSubtype: event.target.value }))}>
+        <option value="">All subtypes</option>{NARRATIVE_SUBTYPES.map(value => <option key={value} value={value}>{NARRATIVE_LABELS[value]}</option>)}<option value="__missing">Not specified (Type 4)</option>
+      </select></label>
+      <button className="text-button" type="button" onClick={() => setSelection({ mbti: '', type: '', narrativeSubtype: '' })}>Clear</button>
     </div>
-    <div className="explorer-selection" aria-live="polite"><strong>{selection.mbti || 'All groups'} AND {selection.type ? TYPE_LABELS[selection.type] : 'All types'}</strong>
+    <div className="explorer-selection" aria-live="polite"><strong>{selection.mbti || 'All groups'} AND {selection.type ? TYPE_LABELS[selection.type] : 'All types'}{selection.narrativeSubtype ? ' · ' + (selection.narrativeSubtype === '__missing' ? 'Not specified (Type 4)' : NARRATIVE_LABELS[selection.narrativeSubtype as keyof typeof NARRATIVE_LABELS]) : ''}</strong>
       <span>{stats.total} {stats.total === 1 ? 'review' : 'reviews'} · {stats.rounds.map(item => `Round ${item.round}: ${item.count}`).join(' / ')}</span>
     </div>
     {!stats.total ? <div className="explorer-empty"><p>No matching reviews</p>
       {selection.mbti ? <button className="tool-button" type="button" onClick={() => setSelection(current => ({ ...current, mbti: '' }))}>Clear MBTI</button> : null}
       {selection.type ? <button className="tool-button" type="button" onClick={() => setSelection(current => ({ ...current, type: '' }))}>Clear Problem Type</button> : null}
+      {selection.narrativeSubtype ? <button className="tool-button" type="button" onClick={() => setSelection(current => ({ ...current, narrativeSubtype: '' }))}>Clear subtype</button> : null}
     </div> : null}
     <div className="explorer-time"><span>Median Time <strong>{stats.total ? stats.medianTime : '—'}</strong> · {stats.total} reviews</span>
       <details><summary>By round</summary><ul>{stats.rounds.map(item => <li key={item.round}>Round {item.round}: <strong>{item.medianTime}</strong> · {item.count} reviews</li>)}</ul></details>
@@ -52,6 +56,7 @@ export default function PatternExplorer({ records, selectedId, onSelect, onGoToI
         <h5>Revision Focus</h5><RevisionBars stats={stats} showPercent={!small}/>
       </section>
       <MbtiBars stats={mbtiStats}/>
+      <NarrativeSubtypeBars records={selected} showPercent={!small}/>
     </div>
     <ReviewTable records={selected} title="Matching Reviews" selectedId={selectedId} onSelect={onSelect} onEdit={onEdit} onDelete={onDelete}/>
     <details className="explorer-info"><summary>About recorded values</summary>

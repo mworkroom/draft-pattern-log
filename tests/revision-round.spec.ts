@@ -5,7 +5,7 @@ import { blankDraft, STRUCTURE_KEYS, toRecord, type ReviewDraft } from '../src/m
 const structure = Object.fromEntries(STRUCTURE_KEYS.map(key => [key, 1])) as ReviewDraft['structure']
 const records = ([1, 2, 3] as const).map(revisionRound => {
   const record = toRecord({
-    ...blankDraft('2026-10-03'), studentName: '정유진', structure, revisionRound,
+    ...blankDraft('2026-10-03'), narrativeSubtypes: ['delayedPointNarrative'], studentName: '정유진', structure, revisionRound,
     problemTypes: revisionRound === 3 ? ['type4', 'unclassified'] : ['type4'],
     unclassifiedNote: revisionRound === 3 ? '차수별 새 패턴' : '',
   })
@@ -50,7 +50,7 @@ for (const width of [1280, 2048]) {
     await expect(roundControl.getByRole('button', { name: '1', exact: true })).toHaveAttribute('aria-pressed', 'true')
     const type4 = page.locator('.type-choice').filter({ hasText: 'Type 4 — Narrative / Indirect' })
     await expect(type4.locator('input')).toBeChecked()
-    await expect(type4.locator('small')).toHaveText('핵심 의미를 늦추거나 숨기고, 극적 효과를 위해 우회적으로 서술')
+    await expect(type4.locator('small')).toHaveText('핵심 내용을 직접 전달하기보다 서사적 전개나 간접적인 연결에 의존하여 단락의 역할과 논리적 흐름이 불명확해짐')
     expect(await type4.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
     await showStatistics(page, 'Problem patterns')
     await expect(page.locator('.pattern-record .revision-round-badge')).toHaveText('3차')

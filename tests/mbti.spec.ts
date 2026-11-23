@@ -3,7 +3,7 @@ import { blankDraft, MBTI_OPTIONS, STRUCTURE_KEYS, toRecord, type ReviewDraft } 
 
 const structure = Object.fromEntries(STRUCTURE_KEYS.map(key => [key, 1])) as ReviewDraft['structure']
 const classified = MBTI_OPTIONS.map(mbti => toRecord({
-  ...blankDraft(mbti === 'xNTJ' ? '2026-09-01' : '2026-10-08'), structure, mbti,
+  ...blankDraft(mbti === 'xNTJ' ? '2026-09-01' : '2026-10-08'), structure, mbti, narrativeSubtypes: ['delayedPointNarrative'],
   studentName: mbti === 'xNTJ' ? 'MBTI Repeat' : `MBTI ${mbti}`, problemTypes: ['type4'],
 }))
 const repeat = toRecord({ ...blankDraft('2026-10-08'), structure, studentName: 'MBTI Repeat', revisionRound: 2, mbti: 'xNTJ', problemTypes: ['type5'] })

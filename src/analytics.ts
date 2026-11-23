@@ -1,6 +1,6 @@
 import {
   REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS, STRUCTURE_KEYS, TIME_OPTIONS, TYPE_KEYS, MBTI_OPTIONS,
-  REVISION_ROUNDS, type ReviewRecordV1, type RevisionKey, type StructureKey, type TypeKey,
+  REVISION_ROUNDS, NARRATIVE_SUBTYPES, NARRATIVE_LABELS, type NarrativeSubtype, type ReviewRecordV1, type RevisionKey, type StructureKey, type TypeKey,
 } from './model'
 
 export interface Filters {
@@ -15,10 +15,11 @@ export interface Filters {
   mbti: string
   tier: string
   type: string
+  narrativeSubtype: string
 }
 
 export const EMPTY_FILTERS: Filters = {
-  from: '', to: '', language: '', level: '', field: '', careerStage: '', sector: '', revisionRound: '', mbti: '', tier: '', type: '',
+  from: '', to: '', language: '', level: '', field: '', careerStage: '', sector: '', revisionRound: '', mbti: '', tier: '', type: '', narrativeSubtype: '',
 }
 
 export function filterReviews(records: ReviewRecordV1[], filters: Filters): ReviewRecordV1[] {
@@ -33,6 +34,8 @@ export function filterReviews(records: ReviewRecordV1[], filters: Filters): Revi
     (!filters.revisionRound || record.revisionRound === Number(filters.revisionRound)) &&
     (!filters.mbti || (record.mbti || '__missing') === filters.mbti) &&
     (!filters.tier || (record.schoolTier ?? '__missing') === filters.tier) &&
+    (!filters.narrativeSubtype || (record.problemTypes.includes('type4') && (filters.narrativeSubtype === '__missing'
+      ? record.narrativeSubtypes.length === 0 : record.narrativeSubtypes.includes(filters.narrativeSubtype as NarrativeSubtype)))) &&
     (!filters.type || record.problemTypes.includes(filters.type as TypeKey)),
   )
 }
@@ -81,6 +84,18 @@ export function revisionRebuildPercent(records: ReviewRecordV1[], key: RevisionK
 
 export function typeCounts(records: ReviewRecordV1[]) {
   return TYPE_KEYS.map(key => ({ key, count: records.filter(record => record.problemTypes.includes(key)).length }))
+}
+
+export function narrativeSubtypeCounts(records: ReviewRecordV1[]) {
+  const selected = records.filter(record => record.problemTypes.includes('type4'))
+  const options = [...NARRATIVE_SUBTYPES.map(key => ({ key, label: NARRATIVE_LABELS[key] })), { key: '__missing', label: 'Not specified (Type 4)' }]
+  return {
+    total: selected.length,
+    items: options.map(({ key, label }) => {
+      const count = selected.filter(record => key === '__missing' ? record.narrativeSubtypes.length === 0 : record.narrativeSubtypes.includes(key as NarrativeSubtype)).length
+      return { key, label, count, percent: selected.length ? Math.round(count / selected.length * 100) : 0 }
+    }),
+  }
 }
 
 export function reworkCounts(records: ReviewRecordV1[]) {

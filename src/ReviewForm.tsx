@@ -2,9 +2,9 @@ import { useRef, type ReactNode } from 'react'
 import { CircleHelp, RotateCcw } from 'lucide-react'
 import {
   AI_USAGE, APPLICATION_TYPES, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, ENGLISH_QUALITY, FIELD_OPTIONS, GENRE_MISMATCH_HELP, GENRE_MISMATCH_LABELS, GENRE_MISMATCH_SUBTYPES, LANGUAGES, REWORK_KEYS, REWORK_LABELS,
-  REVISION_HELP, REVISION_KEYS, REVISION_LABELS, REVISION_LEVELS, REVISION_ROUNDS, MBTI_OPTIONS,
+  NARRATIVE_SUBTYPES, NARRATIVE_LABELS, NARRATIVE_HELP, REVISION_HELP, REVISION_KEYS, REVISION_LABELS, REVISION_LEVELS, REVISION_ROUNDS, MBTI_OPTIONS,
   STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS, TIME_OPTIONS, TYPE_HELP, TYPE_KEYS, TYPE_LABELS,
-  structureTotal, type GenreMismatchSubtype, type ReviewDraft, type ReviewRecordV1, type ReworkKey, type StructureKey, type TypeKey,
+  structureTotal, type NarrativeSubtype, type GenreMismatchSubtype, type ReviewDraft, type ReviewRecordV1, type ReworkKey, type StructureKey, type TypeKey,
 } from './model'
 
 interface Props {
@@ -42,11 +42,13 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
       : [...draft.problemTypes, key]
     if (key === 'type1' && next.includes('type1')) next = next.filter(item => item !== 'type2')
     if (key === 'type2' && next.includes('type2')) next = next.filter(item => item !== 'type1')
-    onChange({ ...draft, problemTypes: next, genreMismatchSubtypes: next.includes('type6') ? draft.genreMismatchSubtypes : [], unclassifiedNote: next.includes('unclassified') ? draft.unclassifiedNote : '' })
+    onChange({ ...draft, problemTypes: next, genreMismatchSubtypes: next.includes('type6') ? draft.genreMismatchSubtypes : [], narrativeSubtypes: next.includes('type4') ? draft.narrativeSubtypes : [], unclassifiedNote: next.includes('unclassified') ? draft.unclassifiedNote : '' })
   }
   const toggleGenreSubtype = (key: GenreMismatchSubtype) => update('genreMismatchSubtypes', draft.genreMismatchSubtypes.includes(key)
     ? draft.genreMismatchSubtypes.filter(item => item !== key)
     : [...draft.genreMismatchSubtypes, key])
+  const toggleNarrativeSubtype = (key: NarrativeSubtype) => update('narrativeSubtypes', draft.narrativeSubtypes.includes(key)
+    ? draft.narrativeSubtypes.filter(item => item !== key) : [...draft.narrativeSubtypes, key])
   const selectedTypes = draft.problemTypes.length
     ? draft.problemTypes.map(key => key === 'unclassified' ? 'New Pattern' : key.replace('type', 'Type ')).join(', ')
     : 'None'
@@ -122,6 +124,14 @@ export default function ReviewForm({ draft, onChange, onSave, onCancelEdit, edit
         <input type="checkbox" checked={draft.problemTypes.includes(key)} onChange={() => toggleType(key)} />
         <span><strong>{TYPE_LABELS[key]}</strong><small>{TYPE_HELP[key]}</small></span>
       </label>)}</div>
+      {draft.problemTypes.includes('type4') ? <div className="genre-subtypes" role="group" aria-label="Type 4 subtypes">
+        <h4>Narrative / Indirect subtype <span className="required">*</span></h4>
+        {(viewing || editing) && !draft.narrativeSubtypes.length ? <p className="section-hint">Not specified. Select a subtype before saving this review.</p> : null}
+        <div className="type-grid">{NARRATIVE_SUBTYPES.map(key => <label key={key} className={'type-choice ' + (draft.narrativeSubtypes.includes(key) ? 'checked' : '')} title={NARRATIVE_HELP[key]}>
+          <input type="checkbox" checked={draft.narrativeSubtypes.includes(key)} onChange={() => toggleNarrativeSubtype(key)} />
+          <span><strong>{NARRATIVE_LABELS[key]}</strong><small>{NARRATIVE_HELP[key]}</small></span>
+        </label>)}</div>
+      </div> : null}
       {draft.problemTypes.includes('type6') ? <div className="genre-subtypes" role="group" aria-label="Type 6 subtypes">
         <h4>Genre Mismatch subtype <span className="required">*</span></h4>
         <div className="type-grid">{GENRE_MISMATCH_SUBTYPES.map(key => <label key={key} className={'type-choice ' + (draft.genreMismatchSubtypes.includes(key) ? 'checked' : '')} title={GENRE_MISMATCH_HELP[key]}>

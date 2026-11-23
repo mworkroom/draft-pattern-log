@@ -1,6 +1,6 @@
 import {
   AI_USAGE, APPLICATION_TYPES, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, ENGLISH_QUALITY, GENRE_MISMATCH_SUBTYPES, LANGUAGES, REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS,
-  STRUCTURE_KEYS, TIERS, TIME_OPTIONS, TYPE_KEYS, REVISION_ROUNDS, MBTI_OPTIONS,
+  STRUCTURE_KEYS, TIERS, TIME_OPTIONS, TYPE_KEYS, REVISION_ROUNDS, MBTI_OPTIONS, NARRATIVE_SUBTYPES,
   type BackupV1, type ReviewRecordV1,
 } from './model'
 
@@ -39,6 +39,8 @@ export function isReviewRecord(value: unknown): value is ReviewRecordV1 {
     isKeyArray(value.problemTypes, TYPE_KEYS) &&
     !(value.problemTypes.includes('type1') && value.problemTypes.includes('type2')) &&
     isKeyArray(value.genreMismatchSubtypes, GENRE_MISMATCH_SUBTYPES) &&
+    isKeyArray(value.narrativeSubtypes, NARRATIVE_SUBTYPES) &&
+    (value.problemTypes.includes('type4') || value.narrativeSubtypes.length === 0) &&
     (value.problemTypes.includes('type6') ? value.genreMismatchSubtypes.length > 0 : value.genreMismatchSubtypes.length === 0) &&
     typeof value.unclassifiedNote === 'string' &&
     (!value.problemTypes.includes('unclassified') || value.unclassifiedNote.trim().length > 0) &&
@@ -66,12 +68,13 @@ function normalizeRecord(value: unknown): unknown {
   const sector = legacyBackground === 'NGO' ? 'NGO / Nonprofit'
     : isOption(legacyBackground, SECTOR_OPTIONS) ? legacyBackground : ''
   const missingGenreSubtypes = !Object.hasOwn(value, 'genreMismatchSubtypes')
+  const missingNarrativeSubtypes = !Object.hasOwn(value, 'narrativeSubtypes')
   const originalRework = value.rework
   const rework = Array.isArray(originalRework)
     ? originalRework.filter(item => typeof item !== 'string' || !RETIRED_REWORK_KEYS.has(item))
     : null
   const removedRework = Array.isArray(originalRework) && rework !== null && rework.length !== originalRework.length
-  if (!missing.length && !missingMbti && !missingRevisionRound && !removedRework && !missingCareerStage && !missingSector && !hasBackground && !missingGenreSubtypes) return value
+  if (!missing.length && !missingMbti && !missingRevisionRound && !removedRework && !missingCareerStage && !missingSector && !hasBackground && !missingGenreSubtypes && !missingNarrativeSubtypes) return value
   const { background: _legacyBackground, ...current } = value
   return {
     ...current,
@@ -81,6 +84,7 @@ function normalizeRecord(value: unknown): unknown {
     ...(missingCareerStage ? { careerStage } : {}),
     ...(missingSector ? { sector } : {}),
     ...(missingGenreSubtypes ? { genreMismatchSubtypes: [] } : {}),
+    ...(missingNarrativeSubtypes ? { narrativeSubtypes: [] } : {}),
     ...Object.fromEntries(missing.map(key => [key, 'none'])),
   }
 }
@@ -142,7 +146,7 @@ export function exportCsv(records: ReviewRecordV1[]): string {
     'id', 'review_date', 'created_at', 'updated_at', 'student_name', 'revision_round', 'mbti', 'draft_language', 'level', 'field', 'career_stage', 'sector',
     'school_tier', 'word_limit', 'draft_length', 'ai_usage',
     ...STRUCTURE_KEYS, 'structure_total', ...REWORK_KEYS, 'rework_total',
-    ...TYPE_KEYS, ...GENRE_MISMATCH_SUBTYPES, 'unclassified_note', ...REVISION_KEYS, 'time_spent', 'surface_english_quality', 'notes',
+    ...TYPE_KEYS, ...GENRE_MISMATCH_SUBTYPES, ...NARRATIVE_SUBTYPES, 'unclassified_note', ...REVISION_KEYS, 'time_spent', 'surface_english_quality', 'notes',
   ]
   const rows = records.map(record => [
     record.id, record.reviewDate, record.createdAt, record.updatedAt, record.studentName, record.revisionRound, record.mbti,
@@ -154,6 +158,7 @@ export function exportCsv(records: ReviewRecordV1[]): string {
     record.rework.length,
     ...TYPE_KEYS.map(key => record.problemTypes.includes(key) ? 1 : 0),
     ...GENRE_MISMATCH_SUBTYPES.map(key => record.genreMismatchSubtypes.includes(key) ? 1 : 0),
+    ...NARRATIVE_SUBTYPES.map(key => record.narrativeSubtypes.includes(key) ? 1 : 0),
     record.unclassifiedNote, ...REVISION_KEYS.map(key => record[key]),
     record.timeSpent, record.surfaceEnglishQuality, record.notes,
   ])

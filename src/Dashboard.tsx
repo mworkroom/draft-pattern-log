@@ -1,3 +1,4 @@
+import { NarrativeSubtypeBars } from './PatternCharts'
 import { useMemo, useState } from 'react'
 import PatternExplorer from './PatternExplorer'
 import ReviewTable from './ReviewTable'
@@ -12,7 +13,7 @@ import {
 } from './analytics'
 import {
   APPLICATION_TYPES, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, LANGUAGES, REWORK_KEYS, REWORK_LABELS, REVISION_LABELS, REVISION_LEVELS, REVISION_ROUNDS, STRUCTURE_KEYS, STRUCTURE_LABELS, TIERS,
-  TYPE_KEYS, TYPE_LABELS, MBTI_OPTIONS, type ReviewRecordV1,
+  NARRATIVE_SUBTYPES, NARRATIVE_LABELS, TYPE_KEYS, TYPE_LABELS, MBTI_OPTIONS, type ReviewRecordV1,
 } from './model'
 
 type Tab = 'structure' | 'patterns' | 'comparison'
@@ -93,6 +94,7 @@ showFilters ? <div className="filters-panel">
           <SelectFilter label="School Tier" value={filters.tier} onChange={value => updateFilter('tier', value)} options={[...TIERS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} />
           <SelectFilter label="Revision Round" value={filters.revisionRound} onChange={value => updateFilter('revisionRound', value)} options={REVISION_ROUNDS.map(value => ({ value: String(value), label: String(value) }))} />
           <SelectFilter label="MBTI" value={filters.mbti} onChange={value => updateFilter('mbti', value)} options={[...MBTI_OPTIONS.map(value => ({ value, label: value })), { value: '__missing', label: 'Not specified' }]} />
+          <SelectFilter label="Narrative / Indirect subtype" value={filters.narrativeSubtype} onChange={value => updateFilter('narrativeSubtype', value)} options={[...NARRATIVE_SUBTYPES.map(value => ({ value, label: NARRATIVE_LABELS[value] })), { value: '__missing', label: 'Not specified (Type 4)' }]} />
           <SelectFilter label="Problem Type" value={filters.type} onChange={value => updateFilter('type', value)} options={TYPE_KEYS.map(value => ({ value, label: TYPE_LABELS[value] }))} />
         </div>
       </div> : null
@@ -140,6 +142,7 @@ showFilters ? <div className="filters-panel">
         {STRUCTURE_KEYS.map(key => <tr key={key}><td title={STRUCTURE_LABELS[key].help}>{STRUCTURE_LABELS[key].label}</td><td><span className="dot blue-dot"/> {averageStructure(korean, key)}</td><td><span className="dot purple-dot"/> {averageStructure(english, key)}</td></tr>)}
       </tbody></table><p className="table-footnote">Average score per item · 0 to 2</p></div> : null}
       {tab === 'patterns' ? <div className="pattern-grid">
+        <NarrativeSubtypeBars records={filtered} />
         <div className="analysis-card"><div className="card-head"><h4>Problem Type Distribution</h4><span>Multiple types per review</span></div>{typeCounts(filtered).map(({ key, count }) => <div className="progress-row" key={key}><span title={TYPE_LABELS[key]}>{TYPE_LABELS[key]}</span><div className="progress-track"><i style={{ width: filtered.length ? count / filtered.length * 100 + '%' : '0%' }}/></div><strong>{count}</strong></div>)}</div>
         <div className="analysis-card"><div className="card-head"><h4>Major Rework Trends</h4><span>Changes made in review</span></div>{reworkCounts(filtered).map(({ key, count }) => <div className="progress-row" key={key}><span>{REWORK_LABELS[key]}</span><div className="progress-track violet"><i style={{ width: filtered.length ? count / filtered.length * 100 + '%' : '0%' }}/></div><strong>{count}</strong></div>)}</div>
         <div className="analysis-card revision-card">

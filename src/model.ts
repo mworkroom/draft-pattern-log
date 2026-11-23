@@ -20,6 +20,7 @@ export const REWORK_KEYS = [
 
 export const TYPE_KEYS = ['type1', 'type2', 'type3', 'type4', 'type5', 'type6', 'type7', 'type8', 'unclassified'] as const
 export const GENRE_MISMATCH_SUBTYPES = ['researchProposal', 'promptResponse'] as const
+export const NARRATIVE_SUBTYPES = ['delayedPointNarrative', 'questionDrivenNarrative'] as const
 export const REVISION_KEYS = ['revision_experience_closing', 'revision_academic_plan', 'revision_conclusion'] as const
 export const REVISION_LEVELS = ['none', 'refine', 'rebuild'] as const
 export const REVISION_ROUNDS = [1, 2, 3] as const
@@ -51,6 +52,7 @@ export type StructureKey = typeof STRUCTURE_KEYS[number]
 export type ReworkKey = typeof REWORK_KEYS[number]
 export type TypeKey = typeof TYPE_KEYS[number]
 export type GenreMismatchSubtype = typeof GENRE_MISMATCH_SUBTYPES[number]
+export type NarrativeSubtype = typeof NARRATIVE_SUBTYPES[number]
 export type RevisionKey = typeof REVISION_KEYS[number]
 export type RevisionLevel = typeof REVISION_LEVELS[number]
 export type RevisionRound = typeof REVISION_ROUNDS[number]
@@ -87,6 +89,7 @@ export interface ReviewRecordV1 {
   rework: ReworkKey[]
   problemTypes: TypeKey[]
   genreMismatchSubtypes: GenreMismatchSubtype[]
+  narrativeSubtypes: NarrativeSubtype[]
   unclassifiedNote: string
   revision_academic_plan: RevisionLevel
   revision_conclusion: RevisionLevel
@@ -144,7 +147,7 @@ export const TYPE_HELP: Record<TypeKey, string> = {
   type1: '분량 초과와 구조 문제가 함께 발생',
   type2: '분량보다 단락 역할, 배치가 주요 문제',
   type3: '과거 경험과 학업 계획의 분량 불균형',
-  type4: '핵심 의미를 늦추거나 숨기고, 극적 효과를 위해 우회적으로 서술',
+  type4: '핵심 내용을 직접 전달하기보다 서사적 전개나 간접적인 연결에 의존하여 단락의 역할과 논리적 흐름이 불명확해짐',
   type5: '경력 전체를 CV처럼 요약해 구체적 사례와 학업 동기가 드러나지 않음',
   type6: '연구계획서 또는 문항별 답변지 형식으로 작성됨',
   type7: '직접 영작하거나 AI/번역 결과를 수정하여 문법, 표현, 의미 전달이 크게 저하된 경우',
@@ -155,6 +158,16 @@ export const TYPE_HELP: Record<TypeKey, string> = {
 export const GENRE_MISMATCH_LABELS: Record<GenreMismatchSubtype, string> = {
   researchProposal: 'Research Proposal Style',
   promptResponse: 'Prompt-Response / Q&A Style',
+}
+
+export const NARRATIVE_LABELS: Record<NarrativeSubtype, string> = {
+  delayedPointNarrative: 'Delayed-Point Narrative',
+  questionDrivenNarrative: 'Question-Driven Narrative',
+}
+
+export const NARRATIVE_HELP: Record<NarrativeSubtype, string> = {
+  delayedPointNarrative: '경험이나 상황을 먼저 서술하고 핵심 의미를 단락 후반이나 다음 단락에서 뒤늦게 설명함',
+  questionDrivenNarrative: '경험에서 배운 점이나 발전시킨 역량보다 새로운 질문의 생성과 확장을 반복적으로 강조하고, 질문을 단락 간 연결 장치로 사용함',
 }
 
 export const GENRE_MISMATCH_HELP: Record<GenreMismatchSubtype, string> = {
@@ -211,6 +224,7 @@ export function blankDraft(reviewDate = localToday()): ReviewDraft {
     rework: [],
     problemTypes: [],
     genreMismatchSubtypes: [],
+    narrativeSubtypes: [],
     unclassifiedNote: '',
     revision_academic_plan: 'none',
     revision_conclusion: 'none',
@@ -240,6 +254,7 @@ export function validateDraft(draft: ReviewDraft): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.reviewDate) || Number.isNaN(Date.parse(draft.reviewDate))) return '유효한 Review Date를 선택해 주세요.'
   if (!STRUCTURE_KEYS.every(key => draft.structure[key] !== null)) return 'Structure Score 8개를 모두 선택해 주세요.'
   if (draft.problemTypes.includes('type6') && !draft.genreMismatchSubtypes.length) return 'Type 6의 하위 유형을 하나 이상 선택해 주세요.'
+  if (draft.problemTypes.includes('type4') && !draft.narrativeSubtypes.length) return 'Type 4의 하위 유형을 하나 이상 선택해 주세요.'
   if (draft.problemTypes.includes('unclassified') && !draft.unclassifiedNote.trim()) return 'Unclassified의 새 패턴 메모를 입력해 주세요.'
   if (!REVISION_KEYS.every(key => REVISION_LEVELS.includes(draft[key]))) return 'Revision Focus 값을 확인해 주세요.'
   for (const value of [draft.wordLimit, draft.draftLength]) {
@@ -271,6 +286,7 @@ export function toRecord(draft: ReviewDraft, original?: ReviewRecordV1): ReviewR
     rework: [...draft.rework],
     problemTypes: [...draft.problemTypes],
     genreMismatchSubtypes: draft.problemTypes.includes('type6') ? [...draft.genreMismatchSubtypes] : [],
+    narrativeSubtypes: draft.problemTypes.includes('type4') ? [...draft.narrativeSubtypes] : [],
     unclassifiedNote: draft.problemTypes.includes('unclassified') ? draft.unclassifiedNote.trim() : '',
     revision_academic_plan: draft.revision_academic_plan,
     revision_conclusion: draft.revision_conclusion,
