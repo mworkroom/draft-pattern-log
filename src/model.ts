@@ -24,7 +24,11 @@ export const NARRATIVE_SUBTYPES = ['delayedPointNarrative', 'questionDrivenNarra
 export const REVISION_KEYS = ['revision_experience_closing', 'revision_academic_plan', 'revision_conclusion'] as const
 export const REVISION_LEVELS = ['none', 'refine', 'rebuild'] as const
 export const REVISION_ROUNDS = [1, 2, 3] as const
-export const MBTI_OPTIONS = ['xNTJ', 'xNTP', 'xNFJ', 'xNFP', 'xSTJ', 'xSTP', 'xSFJ', 'xSFP'] as const
+export const MBTI_OPTIONS = [
+  'INTJ', 'INTP', 'INFJ', 'INFP', 'ISFJ',
+  'ENTJ', 'ENTP', 'ENFJ', 'ENFP', 'ESFJ',
+  'xSTJ', 'xSFP', 'xSTP',
+] as const
 export const TIME_OPTIONS = ['20m', '30m', '45m', '60m', '90m', '120m+'] as const
 export const LANGUAGES = ['English', 'Korean'] as const
 export const APPLICATION_TYPES = ["Master's", "Bachelor's", 'UCAS', 'Foundation'] as const

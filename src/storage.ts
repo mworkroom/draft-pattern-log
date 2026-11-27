@@ -1,12 +1,15 @@
 import {
   AI_USAGE, APPLICATION_TYPES, CAREER_STAGE_OPTIONS, SECTOR_OPTIONS, ENGLISH_QUALITY, GENRE_MISMATCH_SUBTYPES, LANGUAGES, REWORK_KEYS, REVISION_KEYS, REVISION_LEVELS,
   STRUCTURE_KEYS, TIERS, TIME_OPTIONS, TYPE_KEYS, REVISION_ROUNDS, MBTI_OPTIONS, NARRATIVE_SUBTYPES,
-  type BackupV1, type ReviewRecordV1,
+  type BackupV1, type Mbti, type ReviewRecordV1,
 } from './model'
 
 export const STORAGE_KEY = 'sop-score-tracker:records:v1'
 const BACKUP_KEY = 'sop-score-tracker:last-backup-at'
 const RETIRED_REWORK_KEYS = new Set(['addMotivationBridge', 'rebuildAcademicPlan', 'rebuildConclusion'])
+const LEGACY_MBTI = new Map<string, Mbti>([
+  ['xNTJ', 'INTJ'], ['xNTP', 'INTP'], ['xNFJ', 'INFJ'], ['xNFP', 'INFP'], ['xSFJ', 'ISFJ'],
+])
 
 type UnknownObject = Record<string, unknown>
 const isObject = (value: unknown): value is UnknownObject => typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -56,6 +59,7 @@ function normalizeRecord(value: unknown): unknown {
   const missing = REVISION_KEYS.filter(key => !Object.hasOwn(value, key))
   const missingRevisionRound = !Object.hasOwn(value, 'revisionRound')
   const missingMbti = !Object.hasOwn(value, 'mbti')
+  const legacyMbti = typeof value.mbti === 'string' ? LEGACY_MBTI.get(value.mbti) : undefined
   const missingCareerStage = !Object.hasOwn(value, 'careerStage')
   const missingSector = !Object.hasOwn(value, 'sector')
   const hasBackground = Object.hasOwn(value, 'background')
@@ -74,11 +78,11 @@ function normalizeRecord(value: unknown): unknown {
     ? originalRework.filter(item => typeof item !== 'string' || !RETIRED_REWORK_KEYS.has(item))
     : null
   const removedRework = Array.isArray(originalRework) && rework !== null && rework.length !== originalRework.length
-  if (!missing.length && !missingMbti && !missingRevisionRound && !removedRework && !missingCareerStage && !missingSector && !hasBackground && !missingGenreSubtypes && !missingNarrativeSubtypes) return value
+  if (!missing.length && !missingMbti && !legacyMbti && !missingRevisionRound && !removedRework && !missingCareerStage && !missingSector && !hasBackground && !missingGenreSubtypes && !missingNarrativeSubtypes) return value
   const { background: _legacyBackground, ...current } = value
   return {
     ...current,
-    ...(missingMbti ? { mbti: '' } : {}),
+    mbti: missingMbti ? '' : legacyMbti ?? current.mbti,
     ...(missingRevisionRound ? { revisionRound: 1 } : {}),
     ...(removedRework ? { rework } : {}),
     ...(missingCareerStage ? { careerStage } : {}),

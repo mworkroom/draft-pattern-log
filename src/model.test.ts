@@ -436,9 +436,9 @@ describe('revision rounds and stable Type 4 identity', () => {
 })
 
 
-describe('optional eight-group MBTI classification', () => {
+describe('optional MBTI classification', () => {
   it('stores only exact groups, preserves edits and exports MBTI independently', () => {
-    expect(MBTI_OPTIONS).toEqual(['xNTJ', 'xNTP', 'xNFJ', 'xNFP', 'xSTJ', 'xSTP', 'xSFJ', 'xSFP'])
+    expect(MBTI_OPTIONS).toEqual(['INTJ', 'INTP', 'INFJ', 'INFP', 'ISFJ', 'ENTJ', 'ENTP', 'ENFJ', 'ENFP', 'ESFJ', 'xSTJ', 'xSFP', 'xSTP'])
     const draft = completeDraft()
     expect(draft.mbti).toBe('')
     expect(validateDraft(draft)).toBeNull()
@@ -456,36 +456,46 @@ describe('optional eight-group MBTI classification', () => {
     const { mbti: _mbti, ...legacy } = original
     const exportedAt = new Date().toISOString()
     expect(parseBackup({ schemaVersion: 1, exportedAt, records: [legacy] }).records[0]).toEqual(original)
-    for (const mbti of ['INTJ', 'ENTJ', 'XNTJ', 'xABC', null, 1]) {
+    for (const mbti of ['ISTJ', 'ESFP', 'XNTJ', 'xABC', null, 1]) {
       expect(() => parseBackup({ schemaVersion: 1, exportedAt, records: [{ ...original, mbti }] })).toThrow()
       Object.assign(draft, { mbti })
       expect(validateDraft(draft)).toMatch(/MBTI/)
     }
-    const [headers, row] = exportCsv([{ ...original, mbti: 'xNTJ' }]).slice(1).split('\r\n').map(line => line.split(','))
-    expect(row[headers.indexOf('"mbti"')]).toBe('"xNTJ"')
+    const [headers, row] = exportCsv([{ ...original, mbti: 'ENTJ' }]).slice(1).split('\r\n').map(line => line.split(','))
+    expect(row[headers.indexOf('"mbti"')]).toBe('"ENTJ"')
+  })
+
+  it('loads all legacy MBTI values without changing other review fields', () => {
+    const original = toRecord(completeDraft())
+    const legacy = ['xNTJ', 'xNTP', 'xNFJ', 'xNFP', 'xSFJ', 'xSTJ', 'xSFP', 'xSTP']
+    const records = legacy.map((mbti, index) => ({ ...original, id: String(index), mbti }))
+    const restored = parseBackup({ schemaVersion: 1, exportedAt: original.updatedAt, records }).records
+    const expected = ['INTJ', 'INTP', 'INFJ', 'INFP', 'ISFJ', 'xSTJ', 'xSFP', 'xSTP']
+    expect(restored).toEqual(records.map((record, index) => ({ ...record, mbti: expected[index] })))
+    expect(parseBackup(JSON.parse(backupJson(restored))).records).toEqual(restored)
   })
 
   it('counts reviews including repeated names and excludes unclassified reviews from percentages', () => {
     const original = toRecord(completeDraft())
     const records = [
-      { ...original, id: '1', mbti: 'xNTJ' as const, problemTypes: ['type4'] as const },
-      { ...original, id: '2', mbti: 'xNTJ' as const, revisionRound: 2 as const, problemTypes: ['type4'] as const },
-      { ...original, id: '3', mbti: 'xNFP' as const }, original,
+      { ...original, id: '1', mbti: 'INTJ' as const, problemTypes: ['type4'] as const },
+      { ...original, id: '2', mbti: 'INTJ' as const, revisionRound: 2 as const, problemTypes: ['type4'] as const },
+      { ...original, id: '3', mbti: 'ENTJ' as const }, original,
     ].map(record => ({ ...record, problemTypes: [...record.problemTypes] }))
     const stats = mbtiDistribution(records)
     expect(stats.classifiedCount).toBe(3)
     expect(stats.groups.map(group => group.key)).toEqual([...MBTI_OPTIONS])
-    expect(stats.groups[0]).toMatchObject({ key: 'xNTJ', count: 2 })
+    expect(stats.groups[0]).toMatchObject({ key: 'INTJ', count: 2 })
     expect(stats.groups[0].percent).toBeCloseTo(200 / 3)
-    expect(stats.groups[3].percent).toBeCloseTo(100 / 3)
-    expect(stats.groups[1]).toEqual({ key: 'xNTP', count: 0, percent: 0 })
+    expect(stats.groups.find(group => group.key === 'ENTJ')?.percent).toBeCloseTo(100 / 3)
+    expect(stats.groups[1]).toEqual({ key: 'INTP', count: 0, percent: 0 })
     expect(mbtiDistribution([]).groups.every(group => group.count === 0 && group.percent === 0)).toBe(true)
     expect(mbtiDistribution([original]).classifiedCount).toBe(0)
     expect(mbtiDistribution([original]).groups.every(group => Number.isFinite(group.percent))).toBe(true)
-    expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'xNTJ' })).toEqual(records.slice(0, 2))
+    expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'INTJ' })).toEqual(records.slice(0, 2))
     expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: '__missing' })).toEqual([original])
-    expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'xNTJ', revisionRound: '2', type: 'type4' })).toEqual([records[1]])
-    expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'xNFP', type: 'type4' })).toEqual([])
+    expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'INTJ', revisionRound: '2', type: 'type4' })).toEqual([records[1]])
+    expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'ENTJ', type: 'type4' })).toEqual([])
   })
 })
 

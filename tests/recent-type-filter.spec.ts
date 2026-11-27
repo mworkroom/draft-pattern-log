@@ -10,9 +10,9 @@ const makeRecord = (studentName: string, problemTypes: TypeKey[], reviewDate = '
 const records = [
   ...TYPE_KEYS.map(key => ({
     ...makeRecord(`QA ${key}`, [key]),
-    ...(key === 'type3' ? { level: 'Foundation', mbti: 'xNTP' } : {}),
+    ...(key === 'type3' ? { level: 'Foundation', mbti: 'INTP' } : {}),
   })),
-  { ...makeRecord('QA combined types', ['type3', 'type5'], '2026-09-01'), level: 'UCAS', mbti: 'xNTJ' },
+  { ...makeRecord('QA combined types', ['type3', 'type5'], '2026-09-01'), level: 'UCAS', mbti: 'INTJ' },
   makeRecord('QA no type', []),
 ]
 
@@ -67,9 +67,9 @@ for (const width of [1280, 2048]) {
 
     const search = page.getByRole('textbox', { name: 'Search recent reviews' })
     await applicationFilter.selectOption('UCAS')
-    await mbtiFilter.selectOption('xNTP')
+    await mbtiFilter.selectOption('INTP')
     await expect(names).toHaveCount(0)
-    await mbtiFilter.selectOption('xNTJ')
+    await mbtiFilter.selectOption('INTJ')
     await search.fill('combined')
     await expect(names).toHaveText(['QA combined types'])
     await search.fill('type3')

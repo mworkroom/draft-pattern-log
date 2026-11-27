@@ -13,14 +13,14 @@ function review(overrides: Partial<ReviewRecordV1> = {}): ReviewRecordV1 {
 describe('Pattern Explorer selected-review evidence', () => {
   it('uses an AND subset, keeps rounds separate, and excludes the selected type from discoveries', () => {
     const records = [
-      review({ mbti: 'xNFJ', problemTypes: ['type3', 'type5'], timeSpent: '60m', rework: ['inferHiddenLogic'] }),
-      review({ mbti: 'xNFJ', problemTypes: ['type5', 'type7'], revisionRound: 2, timeSpent: '120m+', rework: ['inferHiddenLogic', 'moveContent'] }),
-      review({ mbti: 'xNFJ', problemTypes: ['type3'], revisionRound: 3 }),
-      review({ mbti: 'xNTP', problemTypes: ['type5'] }),
+      review({ mbti: 'INFJ', problemTypes: ['type3', 'type5'], timeSpent: '60m', rework: ['inferHiddenLogic'] }),
+      review({ mbti: 'INFJ', problemTypes: ['type5', 'type7'], revisionRound: 2, timeSpent: '120m+', rework: ['inferHiddenLogic', 'moveContent'] }),
+      review({ mbti: 'INFJ', problemTypes: ['type3'], revisionRound: 3 }),
+      review({ mbti: 'INTP', problemTypes: ['type5'] }),
       review({ problemTypes: ['type5'] }),
     ]
     const before = JSON.stringify(records)
-    const subset = filterReviews(records, { ...EMPTY_FILTERS, mbti: 'xNFJ', type: 'type5' })
+    const subset = filterReviews(records, { ...EMPTY_FILTERS, mbti: 'INFJ', type: 'type5' })
     const stats = explorePatterns(subset, 'type5')
     expect(stats.total).toBe(2)
     expect(stats.types).toEqual([
@@ -35,7 +35,7 @@ describe('Pattern Explorer selected-review evidence', () => {
       { round: 3, count: 0, medianTime: '—' },
     ])
     expect(filterReviews(records, { ...EMPTY_FILTERS, type: 'type5' })).toHaveLength(4)
-    expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'xNFJ' })).toHaveLength(3)
+    expect(filterReviews(records, { ...EMPTY_FILTERS, mbti: 'INFJ' })).toHaveLength(3)
     expect(explorePatterns(records).total).toBe(5)
     expect(JSON.stringify(records)).toBe(before)
   })

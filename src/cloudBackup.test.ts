@@ -163,17 +163,19 @@ describe('cloud backup coordination', () => {
 
 
 describe('MBTI cloud snapshot compatibility', () => {
-  it('reads old snapshots as unclassified and retains MBTI through backup versions', async () => {
-    const current = { ...record('MBTI Student'), mbti: 'xNTJ' as const }
-    const { mbti: _mbti, ...legacy } = current
-    const parsed = parseSnapshot({ id: 'legacy', created_at: new Date().toISOString(), backup: backup([legacy as ReviewRecordV1]) })
-    expect(parsed.backup.records[0].mbti).toBe('')
-    const h = harness([current]); const c = h.make(); await c.retry()
-    expect(h.versions[0].backup.records[0].mbti).toBe('xNTJ')
-    const edited = [{ ...current, mbti: 'xSFP' as const }]
+  it('opens legacy groups and preserves manual E classifications in newer snapshots', async () => {
+    const current = { ...record('MBTI Student'), mbti: 'INTJ' as const }
+    const { mbti: _mbti, ...unclassified } = record('Unclassified Student')
+    const parsed = parseSnapshot({ id: 'legacy', created_at: current.updatedAt, backup: {
+      schemaVersion: 1, exportedAt: current.updatedAt, records: [{ ...current, mbti: 'xNTJ' }, unclassified],
+    } })
+    expect(parsed.backup.records.map(review => review.mbti)).toEqual(['INTJ', ''])
+    const h = harness([current, { ...unclassified, mbti: '' }]); h.remote(parsed)
+    const c = h.make(); await c.retry()
+    expect(c.state.kind).toBe('ready')
+    expect(h.versions).toHaveLength(0)
+    const edited = [{ ...current, mbti: 'ENTJ' as const }, { ...unclassified, mbti: '' as const }]
     h.local(edited); c.changed(edited); await c.retry()
-    expect(h.versions.at(-1)?.backup.records[0].mbti).toBe('xSFP')
-    expect(h.versions[0].backup.records[0].mbti).toBe('xNTJ')
     expect(parseSnapshot({ id: 'current', created_at: new Date().toISOString(), backup: h.versions.at(-1)?.backup }).backup.records).toEqual(edited)
   })
 })

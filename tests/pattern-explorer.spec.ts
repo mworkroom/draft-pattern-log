@@ -9,12 +9,12 @@ function makeRecord(name: string, overrides: Partial<ReviewRecordV1> = {}) {
 }
 const base = makeRecord('Mina')
 const records = [
-  { ...base, id: 'mina-1', mbti: 'xNFJ' as const, reviewDate: '2026-10-10', problemTypes: ['type5', 'type3'] as ReviewRecordV1['problemTypes'], structure: { ...base.structure, logicConnection: 0 }, rework: ['inferHiddenLogic'] as ReviewRecordV1['rework'], notes: 'Connect the experience and motivation.', timeSpent: '60m' as const, revision_experience_closing: 'rebuild' as const },
-  makeRecord('Mina', { id: 'mina-2', mbti: 'xNFJ', reviewDate: '2026-10-12', revisionRound: 2, problemTypes: ['type5'], timeSpent: '30m', notes: 'Follow-up wording.' }),
-  makeRecord('Jun', { id: 'jun-1', mbti: 'xNTP', problemTypes: ['type5', 'type7'], timeSpent: '120m+' }),
+  { ...base, id: 'mina-1', mbti: 'INFJ' as const, reviewDate: '2026-10-10', problemTypes: ['type5', 'type3'] as ReviewRecordV1['problemTypes'], structure: { ...base.structure, logicConnection: 0 }, rework: ['inferHiddenLogic'] as ReviewRecordV1['rework'], notes: 'Connect the experience and motivation.', timeSpent: '60m' as const, revision_experience_closing: 'rebuild' as const },
+  makeRecord('Mina', { id: 'mina-2', mbti: 'INFJ', reviewDate: '2026-10-12', revisionRound: 2, problemTypes: ['type5'], timeSpent: '30m', notes: 'Follow-up wording.' }),
+  makeRecord('Jun', { id: 'jun-1', mbti: 'INTP', problemTypes: ['type5', 'type7'], timeSpent: '120m+' }),
   makeRecord('Legacy', { id: 'legacy-1', problemTypes: ['type3'] }),
   makeRecord('Genre', { id: 'genre-1', mbti: 'xSTJ', problemTypes: ['type6', 'unclassified'], genreMismatchSubtypes: ['researchProposal', 'promptResponse'], unclassifiedNote: 'Repeated prompts.', notes: 'Preserve original notes.' }),
-  makeRecord('Other', { id: 'other-1', mbti: 'xNFJ', problemTypes: ['type4'] }),
+  makeRecord('Other', { id: 'other-1', mbti: 'INFJ', problemTypes: ['type4'] }),
 ]
 
 async function seed(page: Page, data = records) {
@@ -38,13 +38,13 @@ test('three views have distinct contents, persistent independent filters, and or
   await expect(overview.locator('.kpi-card').filter({ hasText: 'Total Reviews' })).toContainText('1')
   await page.getByRole('button', { name: 'Pattern Explorer', exact: true }).click()
   await expect(explorer.locator('.explorer-selection')).toContainText('6 reviews')
-  await expect(explorer.getByRole('region', { name: 'MBTI Distribution' }).getByRole('progressbar')).toHaveCount(8)
+  await expect(explorer.getByRole('region', { name: 'MBTI Distribution' }).getByRole('progressbar')).toHaveCount(13)
   await expect(explorer.getByRole('region', { name: 'Previous Reviews' })).toHaveCount(0)
   const mbti = explorer.getByRole('combobox', { name: 'Explorer MBTI' })
   const type = explorer.getByRole('combobox', { name: 'Explorer Problem Type' })
   await expect(mbti.locator('option')).toHaveText(['All groups', ...MBTI_OPTIONS])
   await expect(type.locator('option')).toHaveText(['All types', ...TYPE_KEYS.map(key => TYPE_LABELS[key])])
-  await mbti.selectOption('xNFJ')
+  await mbti.selectOption('INFJ')
   await type.selectOption('type5')
   await expect(explorer.locator('.explorer-selection')).toContainText('2 reviews')
   await expect(explorer.getByRole('region', { name: 'Draft Patterns' })).not.toContainText(TYPE_LABELS.type5)
@@ -64,7 +64,7 @@ test('three views have distinct contents, persistent independent filters, and or
   await page.getByRole('button', { name: 'Review Overview', exact: true }).click()
   await expect(overview.getByRole('combobox', { name: 'Problem Type', exact: true })).toHaveValue('type7')
   await page.getByRole('button', { name: 'Pattern Explorer', exact: true }).click()
-  await expect(mbti).toHaveValue('xNFJ')
+  await expect(mbti).toHaveValue('INFJ')
   await expect(type).toHaveValue('type5')
   await explorer.getByText('By round', { exact: true }).click()
   await expect(explorer.locator('.explorer-time')).toContainText('30m–60m')
@@ -150,7 +150,7 @@ for (const width of [2048, 1280, 900, 390]) {
     page.on('pageerror', error => errors.push(error.message))
     page.on('console', message => { if (['error', 'warning'].includes(message.type())) errors.push(message.text()) })
     await page.setViewportSize({ width, height: width >= 1280 ? 1000 : 844 })
-    const many = [...records, ...Array.from({ length: 14 }, (_, index) => makeRecord(`Case ${index + 1}`, { id: `extra-${index}`, mbti: index % 2 ? 'xNFJ' : 'xNTJ', problemTypes: ['type3'] }))]
+    const many = [...records, ...Array.from({ length: 14 }, (_, index) => makeRecord(`Case ${index + 1}`, { id: `extra-${index}`, mbti: index % 2 ? 'INFJ' : 'INTJ', problemTypes: ['type3'] }))]
     await seed(page, many)
     await expect(page).toHaveTitle('SOP Score Tracker')
     await expect(page.getByRole('button', { name: '클라우드 백업', exact: true })).toBeVisible()
@@ -161,10 +161,10 @@ for (const width of [2048, 1280, 900, 390]) {
     await page.getByRole('button', { name: 'Pattern Explorer', exact: true }).click()
     const explorer = page.getByRole('region', { name: 'Pattern Explorer', exact: true })
     await expect(explorer.getByRole('heading', { name: 'Pattern Explorer' })).toBeInViewport()
-    await expect(explorer.getByRole('region', { name: 'MBTI Distribution' }).getByRole('progressbar')).toHaveCount(8)
+    await expect(explorer.getByRole('region', { name: 'MBTI Distribution' }).getByRole('progressbar')).toHaveCount(13)
     expect(await explorer.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
     if (process.env.EXPLORER_QA_DIR) await page.screenshot({ path: `${process.env.EXPLORER_QA_DIR}/patterns-${width}.png` })
-    await explorer.getByRole('combobox', { name: 'Explorer MBTI' }).selectOption('xNFJ')
+    await explorer.getByRole('combobox', { name: 'Explorer MBTI' }).selectOption('INFJ')
     await explorer.getByRole('combobox', { name: 'Explorer Problem Type' }).selectOption('type5')
     await expect(explorer.locator('.explorer-selection')).toContainText('2 reviews')
     await explorer.locator('.matching-reviews-table tbody tr').filter({ hasText: 'Mina' }).filter({ hasText: '1차' }).getByRole('button', { name: 'Mina', exact: true }).click()
